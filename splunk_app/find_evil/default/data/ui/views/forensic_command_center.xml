@@ -1,0 +1,103 @@
+<dashboard version="2" theme="dark">
+  <label>Forensic Command Center — Find Evil</label>
+  <description>Investigation forensique mémoire du DC compromis (SRL-2018) — alimenté par YARA-X + Volatility3, interrogeable par agent via Splunk MCP Server</description>
+  <definition><![CDATA[
+{
+  "title": "Forensic Command Center — Find Evil",
+  "description": "DC Windows Server 2016 compromis — kill-chain APT",
+  "inputs": {},
+  "defaults": {
+    "dataSources": {
+      "ds.search": { "options": { "queryParameters": { "earliest": "0", "latest": "now" } } }
+    }
+  },
+  "dataSources": {
+    "ds_triage": {
+      "type": "ds.search",
+      "options": { "query": "search index=forensics sourcetype=forensics:yara_hit | stats count by severity | sort severity" },
+      "name": "Triage par sévérité"
+    },
+    "ds_techniques": {
+      "type": "ds.search",
+      "options": { "query": "search index=forensics sourcetype=forensics:yara_hit | eval sev_rank=case(severity=\"critical\",1,severity=\"high\",2,severity=\"medium\",3,1=1,4) | sort sev_rank | table rule, severity, mitre, description" },
+      "name": "Techniques MITRE"
+    },
+    "ds_crit_count": {
+      "type": "ds.search",
+      "options": { "query": "search index=forensics sourcetype=forensics:yara_hit severity=critical | stats count" },
+      "name": "Détections critiques"
+    },
+    "ds_proc_count": {
+      "type": "ds.search",
+      "options": { "query": "search index=forensics sourcetype=forensics:process | stats dc(pid) as procs" },
+      "name": "Processus analysés"
+    },
+    "ds_timeline": {
+      "type": "ds.search",
+      "options": { "query": "search index=forensics sourcetype=forensics:process | timechart span=1d count as processus" },
+      "name": "Activité processus"
+    },
+    "ds_suspicious_proc": {
+      "type": "ds.search",
+      "options": { "query": "search index=forensics sourcetype=forensics:process process_name IN (\"powershell.exe\",\"cmd.exe\",\"wmic.exe\",\"ntdsutil.exe\",\"psexec.exe\") | stats count by process_name | sort -count" },
+      "name": "Outils d'attaque"
+    }
+  },
+  "visualizations": {
+    "viz_title": {
+      "type": "viz.markdown",
+      "options": { "markdown": "# 🔴 Verdict : COMPROMIS\nContrôleur de domaine Windows Server 2016 — exfiltration d'identifiants Active Directory détectée. Investigation pilotable par agent via **Splunk MCP Server**." }
+    },
+    "viz_crit": {
+      "type": "viz.singlevalue",
+      "options": { "majorColor": "#d41f1f", "unit": "critiques" },
+      "dataSources": { "primary": "ds_crit_count" },
+      "title": "Détections critiques"
+    },
+    "viz_procs": {
+      "type": "viz.singlevalue",
+      "options": { "majorColor": "#0877a6" },
+      "dataSources": { "primary": "ds_proc_count" },
+      "title": "Processus analysés"
+    },
+    "viz_severity": {
+      "type": "viz.bar",
+      "options": {},
+      "dataSources": { "primary": "ds_triage" },
+      "title": "Détections par sévérité"
+    },
+    "viz_attack_tools": {
+      "type": "viz.bar",
+      "options": {},
+      "dataSources": { "primary": "ds_suspicious_proc" },
+      "title": "Outils d'attaque (LOLBins) en mémoire"
+    },
+    "viz_timeline": {
+      "type": "viz.line",
+      "options": {},
+      "dataSources": { "primary": "ds_timeline" },
+      "title": "Chronologie de l'activité processus"
+    },
+    "viz_techniques": {
+      "type": "viz.table",
+      "options": {},
+      "dataSources": { "primary": "ds_techniques" },
+      "title": "Kill-chain MITRE ATT&CK détectée"
+    }
+  },
+  "layout": {
+    "type": "grid",
+    "options": { "width": 1440, "height": 960 },
+    "structure": [
+      { "item": "viz_title", "type": "block", "position": { "x": 0, "y": 0, "w": 1440, "h": 110 } },
+      { "item": "viz_crit", "type": "block", "position": { "x": 0, "y": 110, "w": 360, "h": 160 } },
+      { "item": "viz_procs", "type": "block", "position": { "x": 360, "y": 110, "w": 360, "h": 160 } },
+      { "item": "viz_severity", "type": "block", "position": { "x": 720, "y": 110, "w": 720, "h": 160 } },
+      { "item": "viz_attack_tools", "type": "block", "position": { "x": 0, "y": 270, "w": 720, "h": 290 } },
+      { "item": "viz_timeline", "type": "block", "position": { "x": 720, "y": 270, "w": 720, "h": 290 } },
+      { "item": "viz_techniques", "type": "block", "position": { "x": 0, "y": 560, "w": 1440, "h": 400 } }
+    ]
+  }
+}
+  ]]></definition>
+</dashboard>

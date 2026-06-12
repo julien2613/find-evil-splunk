@@ -1,0 +1,26 @@
+# Secrets — NE JAMAIS committer
+.mcp_token
+.hec_token
+.nvidia_key
+.anthropic_key
+.mcp.json
+*.key
+.env
+.env.local
+web/agent/.env
+
+# Environnements / dépendances
+.venv/
+web/agent/.venv/
+web/frontend/node_modules/
+web/splunk_react/node_modules/
+web/frontend/.next/
+__pycache__/
+*.pyc
+
+# Artefacts générés / données lourdes
+artifacts/
+*.img
+*.spl
+web/frontend/tsconfig.tsbuildinfo
+web/frontend/next-env.d.ts

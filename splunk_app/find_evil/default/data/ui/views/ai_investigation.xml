@@ -1,0 +1,44 @@
+<dashboard version="1.1" theme="dark">
+  <label>AI Investigation</label>
+  <description>Investigation forensique assistée par IA — le contrôleur de domaine compromis (SRL-2018) analysé par Claude via la commande | ai du Splunk AI Toolkit.</description>
+
+  <row>
+    <panel>
+      <html>
+        <div style="padding:10px 16px;background:#1a1426;border:1px solid #4a2a6a;border-radius:10px;color:#b48aff;">
+          <b>✦ Triage IA natif Splunk</b> — la commande <code>| ai</code> envoie les détections YARA de l'index <code>forensics</code> à Claude (connexion AI Toolkit « claude »). Les panneaux s'exécutent au chargement.
+        </div>
+      </html>
+    </panel>
+  </row>
+
+  <row>
+    <panel>
+      <title>Détections (entrée de l'analyse IA)</title>
+      <table>
+        <search>
+          <query>index=forensics sourcetype=forensics:yara_hit | eval sev_rank=case(severity="critical",1,severity="high",2,severity="medium",3,1=1,4) | sort sev_rank | table rule, severity, mitre, description</query>
+          <earliest>0</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="count">8</option>
+        <option name="drilldown">none</option>
+      </table>
+    </panel>
+  </row>
+
+  <row>
+    <panel>
+      <title>Analyse de l'agent IA (| ai → claude)</title>
+      <table>
+        <search>
+          <query>index=forensics sourcetype=forensics:yara_hit | eval line=severity.": ".rule." (".mitre.")" | stats list(line) as dets | eval detections=mvjoin(dets, " | ") | fields detections | ai connection="claude" prompt="Tu es analyste forensique senior. Voici les detections YARA sur un controleur de domaine Windows compromis: {detections}. Donne en francais et concis: 1) un verdict (COMPROMIS/SUSPECT/RAS), 2) un resume de la kill-chain MITRE ATT&amp;CK, 3) trois recommandations de remediation." | rename ai_result_1 as "Analyse"</query>
+          <earliest>0</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="wrap">true</option>
+      </table>
+    </panel>
+  </row>
+</dashboard>

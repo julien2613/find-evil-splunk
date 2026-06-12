@@ -1,0 +1,29 @@
+{
+  "external_app_id": "forensics",
+  "tools": [
+    {
+      "name": "ai_triage",
+      "title": "AI Triage (| ai)",
+      "description": "Triage IA natif Splunk : agrège les détections YARA de l'index forensics et les fait analyser par Claude via la commande `| ai` du Splunk AI Toolkit. Retourne un verdict de compromission, la kill-chain MITRE ATT&CK résumée et des recommandations de remédiation. À utiliser pour obtenir une synthèse d'incident raisonnée par IA, directement depuis Splunk.",
+      "inputSchema": { "type": "object", "properties": {} },
+      "_meta": {
+        "external_app_id": "forensics",
+        "tags": ["security", "forensics", "ai", "triage", "llm", "ai-toolkit", "mitre"],
+        "examples": [
+          {
+            "name": "Synthèse IA de l'incident",
+            "description": "Verdict + kill-chain + remédiation générés par Claude via | ai",
+            "arguments": {},
+            "expected_use": "Conclusion d'analyste assistée par IA dans Splunk"
+          }
+        ],
+        "execution": {
+          "type": "spl",
+          "template": "search index=forensics sourcetype=forensics:yara_hit | eval line=severity.\": \".rule.\" (\".mitre.\")\" | stats list(line) as dets | eval detections=mvjoin(dets, \" | \") | fields detections | ai connection=\"claude\" prompt=\"Tu es analyste forensique senior. Voici les detections YARA sur un controleur de domaine Windows compromis: {detections}. Donne en francais et concis: 1) un verdict (COMPROMIS/SUSPECT/RAS), 2) un resume de la kill-chain MITRE ATT&CK, 3) trois recommandations de remediation.\"",
+          "row_limiter": false,
+          "time_range": false
+        }
+      }
+    }
+  ]
+}

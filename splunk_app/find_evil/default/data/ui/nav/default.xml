@@ -1,0 +1,7 @@
+<nav search_view="search" color="#D41F1F">
+  <view name="a2ui_native" default="true"/>
+  <view name="a2ui_report"/>
+  <view name="ai_investigation"/>
+  <view name="forensic_command_center"/>
+  <view name="search"/>
+</nav>

@@ -1,0 +1,15 @@
+<dashboard version="1.1" theme="dark">
+  <label>A2UI Report</label>
+  <description>Rapport forensique rendu via le protocole A2UI (Agent-to-UI) — l'agent émet des composants déclaratifs, la vue Splunk les rend nativement.</description>
+  <row>
+    <panel>
+      <html>
+        <div style="padding:10px 16px;margin-bottom:8px;background:#1a1426;border:1px solid #4a2a6a;border-radius:10px;color:#b48aff;">
+          <b>✦ A2UI (Agent-to-UI)</b> — l'agent émet le rapport en composants déclaratifs (JSONL : createSurface / updateComponents). Cette vue Splunk les rend en HTML. Source : serveur <code>a2ui_server.py</code> (port 8801).
+        </div>
+        <iframe src="http://localhost:8801/"
+                style="width:100%;height:1400px;border:0;border-radius:10px;background:#0d0d12;"></iframe>
+      </html>
+    </panel>
+  </row>
+</dashboard>

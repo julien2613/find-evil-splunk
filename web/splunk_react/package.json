@@ -1,0 +1,16 @@
+{
+  "name": "find-evil-splunk-react",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "node build.mjs"
+  },
+  "dependencies": {
+    "@splunk/react-ui": "^5.11.0",
+    "@splunk/themes": "^1.8.0",
+    "esbuild": "^0.28.0",
+    "react": "^17.0.2",
+    "react-dom": "^17.0.2",
+    "styled-components": "^5.3.11"
+  }
+}
