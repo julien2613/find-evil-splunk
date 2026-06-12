@@ -131,6 +131,15 @@ SPLUNK_HOME=/Applications/Splunk SPLUNK_PASSWORD=... \
   python splunk_app/find_evil/bin/a2ui_agent.py
 ```
 
+### Deploy as code (Terraform)
+The apps and index can be delivered to a Splunk instance with the official Splunk
+Terraform provider — see [`terraform/`](terraform/):
+```bash
+cd terraform
+export SPLUNK_USERNAME=julien SPLUNK_PASSWORD='********'
+terraform init && terraform apply   # packages the apps to .spl and installs them + the forensics index
+```
+
 ### Connecting an MCP client (Claude Desktop / Code)
 `.mcp.json` (gitignored — contains the bearer token):
 ```json

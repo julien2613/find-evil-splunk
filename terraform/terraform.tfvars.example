@@ -1,0 +1,13 @@
+# Copy to terraform.tfvars and adjust. Prefer environment variables for secrets:
+#   export SPLUNK_USERNAME=julien
+#   export SPLUNK_PASSWORD='********'
+# (the provider reads SPLUNK_URL / SPLUNK_USERNAME / SPLUNK_PASSWORD automatically)
+
+splunk_url      = "localhost:8089"
+splunk_web_url  = "http://localhost:8000"
+splunk_username = "admin"
+# splunk_password = "********"   # better: export SPLUNK_PASSWORD instead of committing this
+
+index_name           = "forensics"
+index_max_size_mb    = 5120
+index_retention_secs = 315360000 # 10 years

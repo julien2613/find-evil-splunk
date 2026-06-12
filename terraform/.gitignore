@@ -1,0 +1,8 @@
+# Terraform state, plugins, and generated app packages
+# (.terraform.lock.hcl is intentionally committed for reproducible provider versions)
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+terraform.tfvars
+dist/
