@@ -107,7 +107,8 @@ function renderNode(id, map, ctx, key) {
         if (id === 'verdict_text') {
             return (
                 <span key={k} style={{ display: 'inline-block', padding: '8px 16px', borderRadius: 8,
-                    background: '#3a0d0d', color: '#ff5b5b', fontWeight: 800, fontSize: 20 }}>{txt}</span>
+                    background: '#fde7e7', color: '#d41f1f', border: '1px solid #f5c2c2',
+                    fontWeight: 800, fontSize: 20 }}>{txt}</span>
             );
         }
         const m = /^h([1-5])$/.exec(v);  // variant ∈ {h1..h5, caption, body}
@@ -176,7 +177,7 @@ function App() {
     }, []);
 
     return (
-        <SplunkThemeProvider family="prisma" colorScheme="dark" density="comfortable">
+        <SplunkThemeProvider family="prisma" colorScheme="light" density="comfortable">
             <div style={{ padding: 8 }}>
                 {state.status === 'loading' && <Paragraph>Chargement du rapport A2UI…</Paragraph>}
                 {state.status === 'error' && (

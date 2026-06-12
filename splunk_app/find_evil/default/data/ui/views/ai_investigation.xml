@@ -1,11 +1,11 @@
-<dashboard version="1.1" theme="dark">
+<dashboard version="1.1" theme="light" stylesheet="find_evil.css">
   <label>AI Investigation</label>
   <description>Investigation forensique assistée par IA — le contrôleur de domaine compromis (SRL-2018) analysé par Claude via la commande | ai du Splunk AI Toolkit.</description>
 
   <row>
     <panel>
       <html>
-        <div style="padding:10px 16px;background:#1a1426;border:1px solid #4a2a6a;border-radius:10px;color:#b48aff;">
+        <div class="fe-banner">
           <b>✦ Triage IA natif Splunk</b> — la commande <code>| ai</code> envoie les détections YARA de l'index <code>forensics</code> à Claude (connexion AI Toolkit « claude »). Les panneaux s'exécutent au chargement.
         </div>
       </html>
@@ -23,6 +23,9 @@
         </search>
         <option name="count">8</option>
         <option name="drilldown">none</option>
+        <format type="color" field="severity">
+          <colorPalette type="map">{"critical":#D41F1F,"high":#F79009,"medium":#EAB308,"low":#12B76A,"informational":#2E90FA,"unknown":#98A2B3}</colorPalette>
+        </format>
       </table>
     </panel>
   </row>

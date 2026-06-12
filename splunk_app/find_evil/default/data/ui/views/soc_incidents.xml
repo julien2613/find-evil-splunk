@@ -1,11 +1,11 @@
-<dashboard version="1.1" theme="dark">
+<dashboard version="1.1" theme="light" stylesheet="find_evil.css">
   <label>SOC Incidents (Workflow)</label>
   <description>Incidents générés automatiquement par le workflow SOC : détection YARA critique -> triage IA (| ai) -> incident notable. Détecter, investiguer, automatiser.</description>
 
   <row>
     <panel>
       <html>
-        <div style="padding:10px 16px;background:#1a1426;border:1px solid #4a2a6a;border-radius:10px;color:#b48aff;">
+        <div class="fe-banner">
           <b>⚙️ Workflow SOC automatisé</b> — l'alerte planifiée <code>Find Evil - Auto Triage Workflow</code> (toutes les 30 min) détecte les détections critiques, lance le triage IA via <code>| ai</code>, et écrit un incident ci-dessous. Lance-la à la demande via <b>Settings → Searches, reports, and alerts → Run</b>.
         </div>
       </html>
@@ -24,6 +24,9 @@
         <option name="drilldown">none</option>
         <option name="wrap">true</option>
         <option name="count">10</option>
+        <format type="color" field="verdict">
+          <colorPalette type="map">{"COMPROMIS":#D41F1F,"SUSPECT":#F79009,"RAS":#12B76A}</colorPalette>
+        </format>
       </table>
     </panel>
   </row>
@@ -39,6 +42,7 @@
         </search>
         <option name="charting.chart">column</option>
         <option name="charting.drilldown">none</option>
+        <option name="charting.fieldColors">{"COMPROMIS":#D41F1F,"SUSPECT":#F79009,"RAS":#12B76A}</option>
       </chart>
     </panel>
   </row>
