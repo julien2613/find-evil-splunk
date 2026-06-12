@@ -75,6 +75,8 @@ flowchart TB
 - **Agent natif Splunk** ([splunk_app/find_evil/bin/forensic_agent_sdk.py](splunk_app/find_evil/bin/forensic_agent_sdk.py)) — `splunklib.ai` + Claude, auto-découverte des outils MCP. Le chemin le plus Splunk-natif.
 - **Agent web** ([web/agent/](web/agent/)) — ADK + CopilotKit, pour l'UI générative (AG-UI).
 
+**A2UI piloté par l'agent SDK** : [splunk_app/find_evil/bin/a2ui_agent.py](splunk_app/find_evil/bin/a2ui_agent.py) fait produire à l'agent `splunklib.ai` une sortie structurée convertie au format **A2UI** (https://a2ui.org), rendue en composants `@splunk/react-ui` natifs dans la vue *A2UI Native*.
+
 ## Les 5 outils forensiques (le différenciateur MCP)
 
 | Outil | Question à laquelle il répond |
