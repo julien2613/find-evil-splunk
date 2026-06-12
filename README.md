@@ -156,6 +156,30 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 **Forensic Command Center** (`forensics_ingest` app) : verdict, détections critiques, triage par sévérité, LOLBins en mémoire, chronologie, table MITRE.
 `http://localhost:8000/en-US/app/forensics_ingest/forensic_command_center`
 
+## Workflow SOC automatisé (Détecter → Investiguer → Automatiser)
+
+Le cœur « piste Sécurité » : une **alerte Splunk planifiée** (`Find Evil - Auto Triage
+Workflow`, toutes les 30 min) qui automatise la boucle SOC complète, sans intervention :
+
+1. **Détecter** — recherche les détections YARA **critiques** dans l'index `forensics`.
+2. **Investiguer** — déclenche le triage IA via la commande **`| ai`** (AI Toolkit →
+   Claude) : verdict + kill-chain MITRE + actions de remédiation.
+3. **Automatiser** — écrit un **incident notable** (`sourcetype=forensics:incident`)
+   via `| collect`, visible dans le dashboard **SOC Incidents**.
+
+```spl
+index=forensics sourcetype=forensics:yara_hit
+| stats list(...) as dets sum(eval(if(severity="critical",1,0))) as critical_count ...
+| ai connection="claude" prompt="Analyste SOC: {detections}. Verdict + kill-chain MITRE + remédiation."
+| where critical_count > 0
+| collect index=forensics sourcetype=forensics:incident
+```
+
+Définition : [splunk_app/find_evil/default/savedsearches.conf](splunk_app/find_evil/default/savedsearches.conf).
+> La saved search doit appartenir à un utilisateur ayant la capacité AI Toolkit
+> (`apply_ai_commander_command`, via le rôle `mltk_admin`) pour que `| ai` s'exécute
+> dans le contexte planifié.
+
 ## Architecture
 
 Voir [ARCHITECTURE.md](ARCHITECTURE.md) pour le diagramme complet (interaction Splunk,

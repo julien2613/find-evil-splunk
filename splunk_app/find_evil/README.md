@@ -29,3 +29,17 @@ Copier ce dossier dans `$SPLUNK_HOME/etc/apps/find_evil/` puis redémarrer Splun
 ```bash
 cd splunk_app && tar czf find_evil.spl find_evil/   # paquet installable Splunkbase
 ```
+
+## Workflow SOC automatisé
+
+`savedsearches.conf` définit l'alerte **Find Evil - Auto Triage Workflow** (planifiée
+toutes les 30 min) : détecte les détections YARA critiques → triage IA via `| ai` →
+écrit un incident (`sourcetype=forensics:incident`) affiché dans la vue **SOC Incidents**.
+
+⚠️ La saved search doit **appartenir à un utilisateur ayant `apply_ai_commander_command`**
+(rôle `mltk_admin`) pour que `| ai` s'exécute en contexte planifié :
+```bash
+curl -sk -u <user:pass> -X POST \
+  "https://localhost:8089/servicesNS/nobody/find_evil/saved/searches/Find%20Evil%20-%20Auto%20Triage%20Workflow/acl" \
+  -d owner=<user> -d sharing=app
+```
