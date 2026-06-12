@@ -29,6 +29,8 @@ from splunklib.ai import Agent, AnthropicModel
 from splunklib.ai.messages import HumanMessage
 from splunklib.ai.tool_settings import ToolSettings, RemoteToolSettings, ToolAllowlist
 
+import a2ui_catalog as cat
+
 REPO = Path("/Users/julientaste/testsplunk")
 STATIC = Path("/Applications/Splunk/etc/apps/find_evil/appserver/static/forensic_report.a2ui.json")
 VERSION, SURFACE = "v0.9", "forensic"
@@ -74,68 +76,19 @@ SEV_RANK = {"critical": 0, "high": 1, "medium": 2, "low": 3, "informational": 4}
 
 
 def to_a2ui(report: ForensicReport) -> str:
-    """Convertit le rapport en A2UI JSONL selon le pattern idiomatique : séparation
-    structure (updateComponents + bindings {path}) / état (updateDataModel), et
-    templates de List pour les tableaux (ChildList {componentId, path})."""
-    techs = sorted(report.techniques, key=lambda t: SEV_RANK.get(t.severity, 5))
-    crit = sum(1 for t in techs if t.severity == "critical")
-    high = sum(1 for t in techs if t.severity == "high")
-
-    # --- État : data model (RFC 6901). Chaînes prêtes à l'affichage. ---
-    data = {
-        "verdict": f"Verdict : {report.verdict}",
-        "kpi_critical": f"Critiques : {crit}",
-        "kpi_high": f"Élevées : {high}",
-        "kpi_total": f"Techniques : {len(techs)}",
-        "analysis": report.analysis,
-        "techniques": [
-            {"label": f"**[{t.severity.upper()}]** {t.signature} — `{t.mitre}` — {t.description}"}
-            for t in techs
-        ],
-        "recommendations": [{"text": f"{i+1}. {r}"} for i, r in enumerate(report.recommendations)],
-    }
-
-    # --- Structure : composants liés au data model par {path}, templates de List. ---
-    comps = [
-        {"id": "root", "component": "Column",
-         "children": ["title", "verdict_card", "kpi_row", "tech_heading", "tech_list",
-                      "ai_heading", "ai_card", "reco_heading", "reco_list"]},
-        {"id": "title", "component": "Text", "variant": "h1",
-         "text": "Find Evil — Rapport d'incident (A2UI × Splunk SDK)"},
-        {"id": "verdict_card", "component": "Card", "child": "verdict_text"},
-        {"id": "verdict_text", "component": "Text", "variant": "h2", "text": {"path": "/verdict"}},
-        {"id": "kpi_row", "component": "Row", "children": ["kpi_c", "kpi_h", "kpi_t"]},
-        {"id": "kpi_c", "component": "Card", "child": "kpi_c_t"},
-        {"id": "kpi_c_t", "component": "Text", "text": {"path": "/kpi_critical"}},
-        {"id": "kpi_h", "component": "Card", "child": "kpi_h_t"},
-        {"id": "kpi_h_t", "component": "Text", "text": {"path": "/kpi_high"}},
-        {"id": "kpi_t", "component": "Card", "child": "kpi_t_t"},
-        {"id": "kpi_t_t", "component": "Text", "text": {"path": "/kpi_total"}},
-        {"id": "tech_heading", "component": "Text", "variant": "h2", "text": "Kill-chain MITRE ATT&CK"},
-        # Template de List : une carte par item de /techniques, paths scopés à l'item.
-        {"id": "tech_list", "component": "List",
-         "children": {"componentId": "tech_tmpl", "path": "/techniques"}},
-        {"id": "tech_tmpl", "component": "Card", "child": "tech_tmpl_t"},
-        {"id": "tech_tmpl_t", "component": "Text", "variant": "body", "text": {"path": "/label"}},
-        {"id": "ai_heading", "component": "Text", "variant": "h2", "text": "Analyse de l'agent"},
-        {"id": "ai_card", "component": "Card", "child": "ai_text"},
-        {"id": "ai_text", "component": "Text", "variant": "body", "text": {"path": "/analysis"}},
-        {"id": "reco_heading", "component": "Text", "variant": "h2", "text": "Recommandations"},
-        {"id": "reco_list", "component": "List",
-         "children": {"componentId": "reco_tmpl", "path": "/recommendations"}},
-        {"id": "reco_tmpl", "component": "Card", "child": "reco_tmpl_t"},
-        {"id": "reco_tmpl_t", "component": "Text", "text": {"path": "/text"}},
-    ]
-
-    lines = [
-        json.dumps({"version": VERSION, "createSurface": {"surfaceId": SURFACE,
-                    "catalogId": "https://a2ui.org/specification/v0_9/catalogs/basic/catalog.json"}}),
-        json.dumps({"version": VERSION, "updateComponents": {"surfaceId": SURFACE,
-                    "components": comps}}, ensure_ascii=False),
-        json.dumps({"version": VERSION, "updateDataModel": {"surfaceId": SURFACE,
-                    "path": "/", "value": data}}, ensure_ascii=False),
-    ]
-    return "\n".join(lines)
+    """Convertit la sortie structurée de l'agent en A2UI enrichi (catalogue partagé
+    a2ui_catalog) : le renderer mappe vers des contrôles @splunk/react-ui denses
+    (VerdictBadge, KpiRow, SeverityBar, TechniqueTable, RecommendationList)."""
+    techs = [{"signature": t.signature, "severity": t.severity, "mitre": t.mitre,
+              "description": t.description}
+             for t in sorted(report.techniques, key=lambda t: SEV_RANK.get(t.severity, 5))]
+    crit = sum(1 for t in techs if t["severity"] == "critical")
+    high = sum(1 for t in techs if t["severity"] == "high")
+    summary = (f"{crit} détections critiques, {high} élevées — {len(techs)} techniques MITRE "
+               f"reconstituant la kill-chain sur le contrôleur de domaine.")
+    return cat.build_forensic(SURFACE, verdict=report.verdict, summary=summary,
+                              analysis=report.analysis, techniques=techs,
+                              recommendations=list(report.recommendations))
 
 
 async def main():

@@ -22,6 +22,12 @@ await build({
     loader: { '.js': 'jsx', '.jsx': 'jsx' },
     jsx: 'automatic',
     define: { 'process.env.NODE_ENV': '"production"' },
+    // Splunk charge ce bundle via RequireJS. On masque `define`/`module`/`exports`
+    // dans le scope du bundle pour que les dépendances UMD (React, styled-components)
+    // prennent la branche "global" et n'enregistrent PAS de define() AMD anonyme
+    // (sinon "Mismatched anonymous define()" + bandeau d'erreur du dashboard).
+    banner: { js: '(function(){var define=void 0,module=void 0,exports=void 0;' },
+    footer: { js: '})();' },
     logLevel: 'info',
 });
 

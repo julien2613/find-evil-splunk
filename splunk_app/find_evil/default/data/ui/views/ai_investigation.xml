@@ -1,44 +1,14 @@
-<dashboard version="1.1" theme="light" stylesheet="find_evil.css" script="find_evil_dash.js">
+<dashboard version="1.1" theme="light" stylesheet="find_evil.css" script="a2ui_react.js">
   <label>AI Investigation</label>
-  <description>Investigation forensique assistée par IA — le contrôleur de domaine compromis (SRL-2018) analysé par Claude via la commande | ai du Splunk AI Toolkit.</description>
-
+  <description>Investigation forensique assistée par IA du contrôleur de domaine compromis (SRL-2018) — verdict, kill-chain MITRE et remédiation rendus en contrôles natifs @splunk/react-ui via A2UI.</description>
   <row>
     <panel>
       <html>
         <div class="fe-banner">
-          <b>✦ Triage IA natif Splunk</b> — la commande <code>| ai</code> envoie les détections YARA de l'index <code>forensics</code> à Claude (connexion AI Toolkit « claude »). Les panneaux s'exécutent au chargement.
+          <b>✦ Triage IA → contrôles React</b> — l'agent <code>splunklib.ai</code> interroge l'index <code>forensics</code> via le Splunk MCP Server, structure son verdict, et l'expose en A2UI. Rendu info-dense ci-dessous.
         </div>
+        <div data-a2ui-src="/static/app/find_evil/forensic_report.a2ui.json" style="min-height:600px;"></div>
       </html>
-    </panel>
-  </row>
-
-  <row>
-    <panel>
-      <title>Détections (entrée de l'analyse IA)</title>
-      <table>
-        <search>
-          <query>index=forensics sourcetype=forensics:yara_hit | eval sev_rank=case(severity="critical",1,severity="high",2,severity="medium",3,1=1,4) | sort sev_rank | table signature, severity, mitre, description</query>
-          <earliest>0</earliest>
-          <latest>now</latest>
-        </search>
-        <option name="count">8</option>
-        <option name="drilldown">none</option>
-      </table>
-    </panel>
-  </row>
-
-  <row>
-    <panel>
-      <title>Analyse de l'agent IA (| ai → claude)</title>
-      <table>
-        <search>
-          <query>index=forensics sourcetype=forensics:yara_hit | eval line=severity.": ".signature." (".mitre.")" | stats list(line) as dets | eval detections=mvjoin(dets, " | ") | fields detections | ai connection="claude" prompt="Tu es analyste forensique senior. Voici les detections YARA sur un controleur de domaine Windows compromis: {detections}. Donne en francais et concis: 1) un verdict (COMPROMIS/SUSPECT/RAS), 2) un resume de la kill-chain MITRE ATT&amp;CK, 3) trois recommandations de remediation." | rename ai_result_1 as "Analyse" | fields "Analyse"</query>
-          <earliest>0</earliest>
-          <latest>now</latest>
-        </search>
-        <option name="drilldown">none</option>
-        <option name="wrap">true</option>
-      </table>
     </panel>
   </row>
 </dashboard>

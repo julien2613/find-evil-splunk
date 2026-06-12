@@ -1,13 +1,13 @@
 <dashboard version="1.1" theme="light" stylesheet="find_evil.css" script="a2ui_react.js">
   <label>A2UI Native (React)</label>
-  <description>Rapport forensique A2UI rendu en composants React natifs Splunk (@splunk/react-ui), sans iframe. L'agent émet du A2UI ; ce composant React le mappe vers les composants Splunk.</description>
+  <description>Rapport forensique émis en A2UI par l'agent officiel splunklib.ai, rendu en contrôles natifs @splunk/react-ui (VerdictBadge, KpiCard, SeverityBar, Table MITRE, Recommandations).</description>
   <row>
     <panel>
       <html>
         <div class="fe-banner">
-          <b>✦ A2UI → React natif Splunk</b> — composants <code>@splunk/react-ui</code> (Card, Heading, Markdown…) pilotés par l'agent officiel <code>splunklib.ai</code> (sortie A2UI v0.9 conforme).
+          <b>✦ A2UI → contrôles React natifs Splunk</b> — l'agent <code>splunklib.ai</code> émet un document A2UI v0.9 (catalogue enrichi) ; le renderer le mappe vers des composants <code>@splunk/react-ui</code> orientés information.
         </div>
-        <div id="a2ui-root" style="min-height:600px;"></div>
+        <div data-a2ui-src="/static/app/find_evil/forensic_report.a2ui.json" style="min-height:600px;"></div>
       </html>
     </panel>
   </row>

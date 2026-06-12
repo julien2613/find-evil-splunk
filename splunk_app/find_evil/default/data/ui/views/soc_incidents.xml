@@ -1,46 +1,14 @@
-<dashboard version="1.1" theme="light" stylesheet="find_evil.css" script="find_evil_dash.js">
+<dashboard version="1.1" theme="light" stylesheet="find_evil.css" script="a2ui_react.js">
   <label>SOC Incidents (Workflow)</label>
-  <description>Incidents générés automatiquement par le workflow SOC : détection YARA critique -> triage IA (| ai) -> incident notable. Détecter, investiguer, automatiser.</description>
-
+  <description>Incidents générés par le workflow SOC (détection YARA critique → triage IA → incident notable), rendus en cartes A2UI → @splunk/react-ui : verdict, compteurs, analyse repliable.</description>
   <row>
     <panel>
       <html>
         <div class="fe-banner">
-          <b>⚙️ Workflow SOC automatisé</b> — l'alerte planifiée <code>Find Evil - Auto Triage Workflow</code> (toutes les 30 min) détecte les détections critiques, lance le triage IA via <code>| ai</code>, et écrit un incident ci-dessous. Lance-la à la demande via <b>Settings → Searches, reports, and alerts → Run</b>.
+          <b>⚙️ Workflow SOC automatisé</b> — l'alerte planifiée <code>Find Evil - Auto Triage Workflow</code> détecte les détections critiques, lance le triage <code>| ai</code> et écrit un incident. Régénère la vue via <code>bin/gen_a2ui.py</code>.
         </div>
+        <div data-a2ui-src="/static/app/find_evil/incidents.a2ui.json" style="min-height:500px;"></div>
       </html>
-    </panel>
-  </row>
-
-  <row>
-    <panel>
-      <title>Incidents générés par le workflow</title>
-      <table>
-        <search>
-          <query>index=forensics sourcetype=forensics:incident | sort -_time | table _time, verdict, critical_count, high_count, ai_analysis</query>
-          <earliest>0</earliest>
-          <latest>now</latest>
-        </search>
-        <option name="drilldown">none</option>
-        <option name="wrap">true</option>
-        <option name="count">10</option>
-      </table>
-    </panel>
-  </row>
-
-  <row>
-    <panel>
-      <title>Verdicts dans le temps</title>
-      <chart>
-        <search>
-          <query>index=forensics sourcetype=forensics:incident | timechart count by verdict</query>
-          <earliest>0</earliest>
-          <latest>now</latest>
-        </search>
-        <option name="charting.chart">column</option>
-        <option name="charting.drilldown">none</option>
-        <option name="charting.fieldColors">{"COMPROMIS":#D41F1F,"SUSPECT":#F79009,"RAS":#12B76A}</option>
-      </chart>
     </panel>
   </row>
 </dashboard>
