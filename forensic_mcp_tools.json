@@ -19,7 +19,7 @@
         ],
         "execution": {
           "type": "spl",
-          "template": "search index=forensics sourcetype=forensics:yara_hit | eval sev_rank=case(severity=\"critical\",1,severity=\"high\",2,severity=\"medium\",3,severity=\"informational\",5,1=1,4) | sort sev_rank | table rule, severity, mitre, description",
+          "template": "search index=forensics sourcetype=forensics:yara_hit | eval sev_rank=case(severity=\"critical\",1,severity=\"high\",2,severity=\"medium\",3,severity=\"informational\",5,1=1,4) | sort sev_rank | table signature, severity, mitre, description",
           "row_limiter": false,
           "time_range": false
         }
@@ -53,7 +53,7 @@
         ],
         "execution": {
           "type": "spl",
-          "template": "search index=forensics sourcetype=forensics:process process_name=$process_name$ | table create_time, pid, ppid, process_name, session_id, threads | sort create_time",
+          "template": "search index=forensics sourcetype=forensics:process process_name=$process_name$ | table create_time, process_id, parent_process_id, process_name, session_id, threads | sort create_time",
           "row_limiter": true,
           "time_range": false
         }
@@ -77,7 +77,7 @@
         ],
         "execution": {
           "type": "spl",
-          "template": "search index=forensics | eval artifact=coalesce(rule, process_name), kind=if(sourcetype=\"forensics:yara_hit\",\"detection\",\"process\") | table _time, kind, artifact, mitre, severity, pid, ppid | sort _time",
+          "template": "search index=forensics | eval artifact=coalesce(signature, process_name), kind=if(sourcetype=\"forensics:yara_hit\",\"detection\",\"process\") | table _time, kind, artifact, mitre, severity, process_id, parent_process_id | sort _time",
           "row_limiter": true,
           "time_range": true
         }
@@ -101,7 +101,7 @@
         ],
         "execution": {
           "type": "spl",
-          "template": "search index=forensics sourcetype=forensics:yara_hit | stats count as detections, values(rule) as rules by severity, mitre | sort -detections",
+          "template": "search index=forensics sourcetype=forensics:yara_hit | stats count as detections, values(signature) as signatures by severity, mitre | sort -detections",
           "row_limiter": false,
           "time_range": false
         }

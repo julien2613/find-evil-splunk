@@ -42,7 +42,7 @@ FORENSIC_TOOLS = [
 
 # --- Schéma de sortie structurée de l'agent ---
 class Technique(BaseModel):
-    rule: str = Field(description="Nom de la règle YARA détectée")
+    signature: str = Field(description="Nom de la signature YARA détectée (CIM)")
     severity: Literal["critical", "high", "medium", "low", "informational"]
     mitre: str = Field(description="Identifiant(s) MITRE ATT&CK, ex. T1003.003")
     description: str = Field(description="Description courte de la technique")
@@ -55,10 +55,11 @@ class ForensicReport(BaseModel):
     recommendations: List[str] = Field(description="3 à 5 actions de remédiation prioritaires")
 
 
-SYSTEM_PROMPT = """Tu es un analyste forensique senior. Investigue l'image mémoire du
-contrôleur de domaine via tes outils (qui interrogent Splunk), puis renvoie un rapport
-structuré : verdict, comptes, techniques MITRE, analyse Markdown, recommandations.
-Appuie-toi UNIQUEMENT sur les résultats des outils."""
+SYSTEM_PROMPT = """Tu es un analyste forensique senior. Tu DOIS d'abord appeler tes outils
+(au minimum forensics_find_attack_techniques ET forensics_triage_summary) pour collecter les
+détections — n'émets JAMAIS de conclusion avant d'avoir les résultats des outils. Ensuite,
+renvoie un rapport structuré : verdict, techniques MITRE (toutes celles renvoyées par l'outil),
+analyse Markdown, recommandations. Appuie-toi UNIQUEMENT sur les résultats des outils."""
 
 
 def _secret(env, fname):
@@ -73,52 +74,66 @@ SEV_RANK = {"critical": 0, "high": 1, "medium": 2, "low": 3, "informational": 4}
 
 
 def to_a2ui(report: ForensicReport) -> str:
-    """Convertit le rapport structuré en flux A2UI JSONL (createSurface + updateComponents)."""
+    """Convertit le rapport en A2UI JSONL selon le pattern idiomatique : séparation
+    structure (updateComponents + bindings {path}) / état (updateDataModel), et
+    templates de List pour les tableaux (ChildList {componentId, path})."""
     techs = sorted(report.techniques, key=lambda t: SEV_RANK.get(t.severity, 5))
     crit = sum(1 for t in techs if t.severity == "critical")
     high = sum(1 for t in techs if t.severity == "high")
-    comps = []
-    root_children = ["title", "verdict_card", "kpi_row", "tech_heading", "tech_list",
-                     "ai_heading", "ai_card", "reco_heading", "reco_list"]
-    comps.append({"id": "root", "component": "Column", "children": root_children})
-    comps.append({"id": "title", "component": "Text", "variant": "h1",
-                  "text": "Find Evil — Rapport d'incident (A2UI × Splunk SDK)"})
-    comps.append({"id": "verdict_card", "component": "Card", "child": "verdict_text"})
-    comps.append({"id": "verdict_text", "component": "Text", "variant": "h2",
-                  "text": f"Verdict : {report.verdict}"})
-    comps.append({"id": "kpi_row", "component": "Row", "children": ["kpi_c", "kpi_h", "kpi_t"]})
-    comps.append({"id": "kpi_c", "component": "Card", "child": "kpi_c_t"})
-    comps.append({"id": "kpi_c_t", "component": "Text", "text": f"Critiques : {crit}"})
-    comps.append({"id": "kpi_h", "component": "Card", "child": "kpi_h_t"})
-    comps.append({"id": "kpi_h_t", "component": "Text", "text": f"Élevées : {high}"})
-    comps.append({"id": "kpi_t", "component": "Card", "child": "kpi_t_t"})
-    comps.append({"id": "kpi_t_t", "component": "Text", "text": f"Techniques : {len(techs)}"})
-    comps.append({"id": "tech_heading", "component": "Text", "variant": "h2", "text": "Kill-chain MITRE ATT&CK"})
-    tech_ids = []
-    for i, t in enumerate(techs):
-        rid, tid = f"tech_{i}", f"tech_{i}_t"
-        tech_ids.append(rid)
-        comps.append({"id": rid, "component": "Card", "child": tid})
-        comps.append({"id": tid, "component": "Text", "severity": t.severity,
-                      "text": f"[{t.severity.upper()}] {t.rule} — {t.mitre} — {t.description}"})
-    comps.append({"id": "tech_list", "component": "List", "children": tech_ids})
-    comps.append({"id": "ai_heading", "component": "Text", "variant": "h2", "text": "Analyse de l'agent"})
-    comps.append({"id": "ai_card", "component": "Card", "child": "ai_text"})
-    comps.append({"id": "ai_text", "component": "Text", "variant": "markdown", "text": report.analysis})
-    comps.append({"id": "reco_heading", "component": "Text", "variant": "h2", "text": "Recommandations"})
-    reco_ids = []
-    for i, r in enumerate(report.recommendations):
-        rid = f"reco_{i}"
-        reco_ids.append(rid)
-        comps.append({"id": rid, "component": "Card", "child": f"{rid}_t"})
-        comps.append({"id": f"{rid}_t", "component": "Text", "text": f"{i+1}. {r}"})
-    comps.append({"id": "reco_list", "component": "List", "children": reco_ids})
+
+    # --- État : data model (RFC 6901). Chaînes prêtes à l'affichage. ---
+    data = {
+        "verdict": f"Verdict : {report.verdict}",
+        "kpi_critical": f"Critiques : {crit}",
+        "kpi_high": f"Élevées : {high}",
+        "kpi_total": f"Techniques : {len(techs)}",
+        "analysis": report.analysis,
+        "techniques": [
+            {"label": f"**[{t.severity.upper()}]** {t.signature} — `{t.mitre}` — {t.description}"}
+            for t in techs
+        ],
+        "recommendations": [{"text": f"{i+1}. {r}"} for i, r in enumerate(report.recommendations)],
+    }
+
+    # --- Structure : composants liés au data model par {path}, templates de List. ---
+    comps = [
+        {"id": "root", "component": "Column",
+         "children": ["title", "verdict_card", "kpi_row", "tech_heading", "tech_list",
+                      "ai_heading", "ai_card", "reco_heading", "reco_list"]},
+        {"id": "title", "component": "Text", "variant": "h1",
+         "text": "Find Evil — Rapport d'incident (A2UI × Splunk SDK)"},
+        {"id": "verdict_card", "component": "Card", "child": "verdict_text"},
+        {"id": "verdict_text", "component": "Text", "variant": "h2", "text": {"path": "/verdict"}},
+        {"id": "kpi_row", "component": "Row", "children": ["kpi_c", "kpi_h", "kpi_t"]},
+        {"id": "kpi_c", "component": "Card", "child": "kpi_c_t"},
+        {"id": "kpi_c_t", "component": "Text", "text": {"path": "/kpi_critical"}},
+        {"id": "kpi_h", "component": "Card", "child": "kpi_h_t"},
+        {"id": "kpi_h_t", "component": "Text", "text": {"path": "/kpi_high"}},
+        {"id": "kpi_t", "component": "Card", "child": "kpi_t_t"},
+        {"id": "kpi_t_t", "component": "Text", "text": {"path": "/kpi_total"}},
+        {"id": "tech_heading", "component": "Text", "variant": "h2", "text": "Kill-chain MITRE ATT&CK"},
+        # Template de List : une carte par item de /techniques, paths scopés à l'item.
+        {"id": "tech_list", "component": "List",
+         "children": {"componentId": "tech_tmpl", "path": "/techniques"}},
+        {"id": "tech_tmpl", "component": "Card", "child": "tech_tmpl_t"},
+        {"id": "tech_tmpl_t", "component": "Text", "variant": "body", "text": {"path": "/label"}},
+        {"id": "ai_heading", "component": "Text", "variant": "h2", "text": "Analyse de l'agent"},
+        {"id": "ai_card", "component": "Card", "child": "ai_text"},
+        {"id": "ai_text", "component": "Text", "variant": "body", "text": {"path": "/analysis"}},
+        {"id": "reco_heading", "component": "Text", "variant": "h2", "text": "Recommandations"},
+        {"id": "reco_list", "component": "List",
+         "children": {"componentId": "reco_tmpl", "path": "/recommendations"}},
+        {"id": "reco_tmpl", "component": "Card", "child": "reco_tmpl_t"},
+        {"id": "reco_tmpl_t", "component": "Text", "text": {"path": "/text"}},
+    ]
 
     lines = [
         json.dumps({"version": VERSION, "createSurface": {"surfaceId": SURFACE,
                     "catalogId": "https://a2ui.org/specification/v0_9/catalogs/basic/catalog.json"}}),
         json.dumps({"version": VERSION, "updateComponents": {"surfaceId": SURFACE,
-                    "root": "root", "components": comps}}, ensure_ascii=False),
+                    "components": comps}}, ensure_ascii=False),
+        json.dumps({"version": VERSION, "updateDataModel": {"surfaceId": SURFACE,
+                    "path": "/", "value": data}}, ensure_ascii=False),
     ]
     return "\n".join(lines)
 
@@ -143,7 +158,8 @@ async def main():
     ) as agent:
         print("[A2UI × Splunk SDK] investigation en cours…")
         result = await agent.invoke([HumanMessage(
-            content="Investigue l'image mémoire et produis le rapport d'incident structuré.")])
+            content="Appelle d'abord forensics_find_attack_techniques et forensics_triage_summary, "
+                    "puis produis le rapport d'incident structuré à partir de leurs résultats.")])
         report: ForensicReport = result.structured_output
         print(f"  verdict={report.verdict} | {len(report.techniques)} techniques | "
               f"{len(report.recommendations)} recommandations")

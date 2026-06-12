@@ -18,8 +18,8 @@ forensiques. L'ingestion elle-même se fait via le SDK Python officiel
 | Champ | Description |
 |---|---|
 | `event_time` | horodatage (ISO8601) — source de `_time` |
-| `pid`, `ppid` | PID / PID parent |
-| `process_name` | nom du processus |
+| `process_id`, `parent_process_id` | PID / PID parent (CIM) |
+| `process_name`, `dest` | nom du processus, hôte (CIM Endpoint.Processes) |
 | `create_time`, `exit_time` | création / fin |
 | `threads`, `session_id`, `wow64`, `offset_v` | métadonnées process |
 | `image`, `host_role`, `os` | contexte de l'évidence |
@@ -28,7 +28,7 @@ forensiques. L'ingestion elle-même se fait via le SDK Python officiel
 | Champ | Description |
 |---|---|
 | `event_time` | horodatage d'acquisition — source de `_time` |
-| `rule` | nom de la règle YARA |
+| `signature`, `dest` | nom de la signature YARA, hôte (CIM Alerts) |
 | `severity` | critical / high / medium / low / informational |
 | `mitre` | technique(s) MITRE ATT&CK |
 | `description` | description de la règle |
@@ -41,5 +41,6 @@ Généré par l'alerte planifiée (verdict, comptes, analyse IA).
 Copier ce dossier dans `$SPLUNK_HOME/etc/apps/forensics_ingest/` puis redémarrer
 Splunk (les réglages index-time de `props.conf` s'appliquent au démarrage).
 
-> Évolution pro : aligner les champs sur le **CIM** (Endpoint.Processes :
-> `process`, `process_id`, `parent_process_id`) pour la compatibilité Enterprise Security.
+> ✅ **Champs alignés CIM** : `forensics:process` suit Endpoint.Processes
+> (`process_name`, `process_id`, `parent_process_id`, `dest`) ; `forensics:yara_hit`
+> suit Alerts/IDS (`signature`, `severity`, `dest`). Compatible Enterprise Security.

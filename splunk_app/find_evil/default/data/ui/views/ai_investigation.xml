@@ -17,7 +17,7 @@
       <title>Détections (entrée de l'analyse IA)</title>
       <table>
         <search>
-          <query>index=forensics sourcetype=forensics:yara_hit | eval sev_rank=case(severity="critical",1,severity="high",2,severity="medium",3,1=1,4) | sort sev_rank | table rule, severity, mitre, description</query>
+          <query>index=forensics sourcetype=forensics:yara_hit | eval sev_rank=case(severity="critical",1,severity="high",2,severity="medium",3,1=1,4) | sort sev_rank | table signature, severity, mitre, description</query>
           <earliest>0</earliest>
           <latest>now</latest>
         </search>
@@ -32,7 +32,7 @@
       <title>Analyse de l'agent IA (| ai → claude)</title>
       <table>
         <search>
-          <query>index=forensics sourcetype=forensics:yara_hit | eval line=severity.": ".rule." (".mitre.")" | stats list(line) as dets | eval detections=mvjoin(dets, " | ") | fields detections | ai connection="claude" prompt="Tu es analyste forensique senior. Voici les detections YARA sur un controleur de domaine Windows compromis: {detections}. Donne en francais et concis: 1) un verdict (COMPROMIS/SUSPECT/RAS), 2) un resume de la kill-chain MITRE ATT&amp;CK, 3) trois recommandations de remediation." | rename ai_result_1 as "Analyse"</query>
+          <query>index=forensics sourcetype=forensics:yara_hit | eval line=severity.": ".signature." (".mitre.")" | stats list(line) as dets | eval detections=mvjoin(dets, " | ") | fields detections | ai connection="claude" prompt="Tu es analyste forensique senior. Voici les detections YARA sur un controleur de domaine Windows compromis: {detections}. Donne en francais et concis: 1) un verdict (COMPROMIS/SUSPECT/RAS), 2) un resume de la kill-chain MITRE ATT&amp;CK, 3) trois recommandations de remediation." | rename ai_result_1 as "Analyse"</query>
           <earliest>0</earliest>
           <latest>now</latest>
         </search>

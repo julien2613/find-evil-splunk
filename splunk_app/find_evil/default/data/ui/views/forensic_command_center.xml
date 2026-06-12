@@ -19,7 +19,7 @@
     },
     "ds_techniques": {
       "type": "ds.search",
-      "options": { "query": "search index=forensics sourcetype=forensics:yara_hit | eval sev_rank=case(severity=\"critical\",1,severity=\"high\",2,severity=\"medium\",3,1=1,4) | sort sev_rank | table rule, severity, mitre, description" },
+      "options": { "query": "search index=forensics sourcetype=forensics:yara_hit | eval sev_rank=case(severity=\"critical\",1,severity=\"high\",2,severity=\"medium\",3,1=1,4) | sort sev_rank | table signature, severity, mitre, description" },
       "name": "Techniques MITRE"
     },
     "ds_crit_count": {
@@ -29,7 +29,7 @@
     },
     "ds_proc_count": {
       "type": "ds.search",
-      "options": { "query": "search index=forensics sourcetype=forensics:process | stats dc(pid) as procs" },
+      "options": { "query": "search index=forensics sourcetype=forensics:process | stats dc(process_id) as procs" },
       "name": "Processus analysés"
     },
     "ds_timeline": {

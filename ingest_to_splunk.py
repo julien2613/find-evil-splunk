@@ -5,13 +5,13 @@ Connexion au service Splunk puis index.attached_socket() pour streamer les évé
 JSON ; le parsing (champs + _time depuis event_time) est assuré par le TA versionné
 `splunk_app/forensics_ingest` (props.conf).
 
-Sourcetypes produits
---------------------
-forensics:process   — un processus (Volatility3 windows.psscan)
-    event_time, pid, ppid, process_name, create_time, exit_time, threads,
-    session_id, wow64, offset_v, image, host_role, os
-forensics:yara_hit  — une détection YARA (apt_detection_rules.yar)
-    event_time, rule, description, severity, mitre, image, host_role
+Sourcetypes produits (champs alignés CIM — Common Information Model)
+-------------------------------------------------------------------
+forensics:process   — un processus (Volatility3 windows.psscan) — CIM Endpoint.Processes
+    event_time, dest, process_name, process_id, parent_process_id, create_time,
+    exit_time, threads, session_id, wow64, offset_v, image, host_role, os
+forensics:yara_hit  — une détection YARA (apt_detection_rules.yar) — CIM Alerts/IDS
+    event_time, dest, signature, description, severity, mitre, image, host_role
 
 Config (CLI ou env) : --host/SPLUNK_HOST, --port/SPLUNK_PORT, --username/SPLUNK_USERNAME,
 SPLUNK_PASSWORD (ou .splunk_pass), --index, --image-name, --artifacts.
@@ -56,13 +56,19 @@ def _event_time(iso: str) -> str:
         return ACQUISITION_TIME
 
 
+DEST = "base-dc"  # hôte (CIM dest) — contrôleur de domaine compromis (shieldbase.lan)
+
+
 def process_events(artifacts: Path, image: str):
+    """Champs alignés CIM Endpoint.Processes (process_name, process_id, parent_process_id, dest)."""
     data = json.loads((artifacts / "windows_psscan.json").read_text())
     for p in data:
         yield OrderedDict([
             ("event_time", _event_time(p.get("CreateTime"))),
-            ("pid", p.get("PID")), ("ppid", p.get("PPID")),
+            ("dest", DEST),
             ("process_name", p.get("ImageFileName")),
+            ("process_id", p.get("PID")),
+            ("parent_process_id", p.get("PPID")),
             ("create_time", p.get("CreateTime")), ("exit_time", p.get("ExitTime")),
             ("threads", p.get("Threads")), ("session_id", p.get("SessionId")),
             ("wow64", p.get("Wow64")), ("offset_v", p.get("Offset(V)")),
@@ -72,13 +78,16 @@ def process_events(artifacts: Path, image: str):
 
 
 def yara_events(artifacts: Path, rules_file: Path, image: str):
+    """Champs alignés CIM Alerts/IDS (signature, severity, dest)."""
     metas = parse_rule_metadata(rules_file)
     for line in (artifacts / "yara_hits.ndjson").read_text().splitlines():
         for r in json.loads(line).get("rules", []):
             name = r.get("identifier")
             meta = metas.get(name, {})
             yield OrderedDict([
-                ("event_time", ACQUISITION_TIME), ("rule", name),
+                ("event_time", ACQUISITION_TIME),
+                ("dest", DEST),
+                ("signature", name),
                 ("description", meta.get("description", "")),
                 ("severity", meta.get("severity", "unknown")),
                 ("mitre", meta.get("mitre", "")),
