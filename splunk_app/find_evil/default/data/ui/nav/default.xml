@@ -3,6 +3,5 @@
   <view name="a2ui_native"/>
   <view name="ai_investigation"/>
   <view name="forensic_command_center"/>
-  <view name="a2ui_report"/>
   <view name="search"/>
 </nav>

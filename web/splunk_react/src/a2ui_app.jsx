@@ -42,82 +42,86 @@ function miniMarkdown(s) {
         .replace(/\n/g, '<br/>');
 }
 
-// Mappe un composant A2UI -> élément React Splunk
-function renderNode(id, map, depth = 0) {
+// Résolution JSON Pointer (RFC 6901) dans le contexte de données courant (scope).
+function resolvePath(ctx, pointer) {
+    if (!pointer || pointer === '/') return ctx;
+    let cur = ctx;
+    pointer.split('/').slice(1).forEach((seg) => {
+        seg = seg.replace(/~1/g, '/').replace(/~0/g, '~');
+        cur = cur == null ? cur : cur[seg];
+    });
+    return cur;
+}
+
+// DynamicString : littéral (string) ou data binding ({path}).
+function resolveString(ctx, val) {
+    if (typeof val === 'object' && val && 'path' in val) {
+        const v = resolvePath(ctx, val.path);
+        return v == null ? '' : String(v);
+    }
+    return val == null ? '' : String(val);
+}
+
+// Enfants : tableau statique d'ids OU template {componentId, path} (ChildList A2UI).
+function childNodes(children, map, ctx, key) {
+    if (Array.isArray(children)) {
+        return children.map((cid) => renderNode(cid, map, ctx, key + ':' + cid));
+    }
+    if (children && children.componentId && children.path) {
+        const arr = resolvePath(ctx, children.path) || [];
+        // Template : rend componentId une fois par item, paths scopés à l'item.
+        return arr.map((item, i) => renderNode(children.componentId, map, item, key + ':tmpl:' + i));
+    }
+    return null;
+}
+
+// Mappe un composant A2UI -> élément React Splunk. ctx = data model courant (scope).
+function renderNode(id, map, ctx, key) {
     const c = map[id];
     if (!c) return null;
     const t = c.component;
-    const kids = (c.children || []).map((cid) => renderNode(cid, map, depth + 1));
+    const k = key || id;
 
     if (t === 'Column') {
-        return (
-            <div key={id} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                {kids}
-            </div>
-        );
+        return <div key={k} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            {childNodes(c.children, map, ctx, k)}</div>;
     }
     if (t === 'Row') {
-        return (
-            <div key={id} style={{ display: 'flex', flexDirection: 'row', gap: 14, flexWrap: 'wrap' }}>
-                {kids}
-            </div>
-        );
+        return <div key={k} style={{ display: 'flex', flexDirection: 'row', gap: 14, flexWrap: 'wrap' }}>
+            {childNodes(c.children, map, ctx, k)}</div>;
     }
     if (t === 'List') {
-        return (
-            <div key={id} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {kids}
-            </div>
-        );
+        return <div key={k} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {childNodes(c.children, map, ctx, k)}</div>;
     }
     if (t === 'Card') {
-        const child = c.child ? renderNode(c.child, map, depth + 1) : null;
-        const sevChild = map[c.child];
-        const accent =
-            sevChild && sevChild.severity ? SEV_COLOR[sevChild.severity] || '#3a506b' : null;
         return (
-            <Card key={id} style={accent ? { flex: 1, borderLeft: `4px solid ${accent}` } : { flex: 1 }}>
-                <Card.Body>
-                    {child}
-                    {kids}
-                </Card.Body>
+            <Card key={k} style={{ flex: 1 }}>
+                <Card.Body>{c.child ? renderNode(c.child, map, ctx, k + ':' + c.child) : null}</Card.Body>
             </Card>
         );
     }
     if (t === 'Text') {
         const v = c.variant || 'body';
-        const txt = typeof c.text === 'object' ? JSON.stringify(c.text) : c.text || '';
+        const txt = resolveString(ctx, c.text);
         if (id === 'verdict_text') {
             return (
-                <span
-                    key={id}
-                    style={{
-                        display: 'inline-block',
-                        padding: '8px 16px',
-                        borderRadius: 8,
-                        background: '#3a0d0d',
-                        color: '#ff5b5b',
-                        fontWeight: 800,
-                        fontSize: 20,
-                    }}
-                >
-                    {txt}
-                </span>
+                <span key={k} style={{ display: 'inline-block', padding: '8px 16px', borderRadius: 8,
+                    background: '#3a0d0d', color: '#ff5b5b', fontWeight: 800, fontSize: 20 }}>{txt}</span>
             );
         }
-        // variant ∈ {h1..h5, caption, body} (catalogue A2UI v0.9). Les titres -> Heading.
-        const m = /^h([1-5])$/.exec(v);
-        if (m) return <Heading key={id} level={Number(m[1])}>{txt}</Heading>;
+        const m = /^h([1-5])$/.exec(v);  // variant ∈ {h1..h5, caption, body}
+        if (m) return <Heading key={k} level={Number(m[1])}>{txt}</Heading>;
         if (v === 'caption')
-            return <Paragraph key={id} style={{ fontSize: 12, color: '#8a8a9a' }}>{txt}</Paragraph>;
-        // body (défaut) — le texte A2UI supporte le markdown nativement.
-        return <Markdown key={id} text={txt} />;
+            return <Paragraph key={k} style={{ fontSize: 12, color: '#8a8a9a' }}>{txt}</Paragraph>;
+        return <Markdown key={k} text={txt} />;  // text supporte le markdown nativement
     }
-    return <div key={id}>[{t}]</div>;
+    return <div key={k}>[{t}]</div>;
 }
 
 function parseA2UI(text) {
     const map = {};
+    let dataModel = {};
     let root = null;
     text.split('\n').forEach((line) => {
         line = line.trim();
@@ -129,23 +133,34 @@ function parseA2UI(text) {
             return;
         }
         if (msg.updateComponents) {
-            const uc = msg.updateComponents;
-            if (uc.root) root = uc.root;
-            (uc.components || []).forEach((comp) => {
+            (msg.updateComponents.components || []).forEach((comp) => {
                 map[comp.id] = comp;
             });
             if (!root && map.root) root = 'root';
         }
+        if (msg.updateDataModel) {
+            // Applique la valeur au chemin indiqué (RFC 6901). "/" remplace le modèle.
+            const dm = msg.updateDataModel;
+            if (!dm.path || dm.path === '/') {
+                dataModel = dm.value;
+            } else {
+                const segs = dm.path.split('/').slice(1);
+                let cur = dataModel;
+                segs.slice(0, -1).forEach((s) => { cur = cur[s] = cur[s] || {}; });
+                cur[segs[segs.length - 1]] = dm.value;
+            }
+        }
         if (msg.deleteSurface) {
             Object.keys(map).forEach((k) => delete map[k]);
+            dataModel = {};
             root = null;
         }
     });
-    return { map, root };
+    return { map, root, dataModel };
 }
 
 function App() {
-    const [state, setState] = useState({ status: 'loading', map: {}, root: null, count: 0 });
+    const [state, setState] = useState({ status: 'loading', map: {}, root: null, dataModel: {}, count: 0 });
 
     useEffect(() => {
         fetch(A2UI_SRC)
@@ -154,10 +169,10 @@ function App() {
                 return r.text();
             })
             .then((text) => {
-                const { map, root } = parseA2UI(text);
-                setState({ status: 'ok', map, root, count: Object.keys(map).length });
+                const { map, root, dataModel } = parseA2UI(text);
+                setState({ status: 'ok', map, root, dataModel, count: Object.keys(map).length });
             })
-            .catch((e) => setState({ status: 'error', error: e.message, map: {}, root: null, count: 0 }));
+            .catch((e) => setState({ status: 'error', error: e.message, map: {}, root: null, dataModel: {}, count: 0 }));
     }, []);
 
     return (
@@ -176,7 +191,7 @@ function App() {
                             Rendu via composants @splunk/react-ui — {state.count} composants A2UI
                             (protocole Agent-to-UI v0.9).
                         </Paragraph>
-                        {state.root && renderNode(state.root, state.map)}
+                        {state.root && renderNode(state.root, state.map, state.dataModel, state.root)}
                     </div>
                 )}
             </div>

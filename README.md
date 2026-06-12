@@ -31,22 +31,22 @@ flowchart TB
     end
     subgraph AG["3 · Couche agentique"]
         MCP["Splunk MCP Server (officiel)<br/>/services/mcp"]
-        TOOLS["4 outils forensiques custom<br/>find_attack_techniques · investigate_process<br/>attack_timeline · triage_summary"]
+        TOOLS["5 outils forensiques custom<br/>find_attack_techniques · triage_summary · investigate_process<br/>attack_timeline · ai_triage (| ai)"]
         MCP --> TOOLS
     end
-    subgraph UI["4 · Frontend agentique (web/)"]
-        AGENT["Agent ADK<br/>Claude via LiteLLM"]
-        FE["CopilotKit + AG-UI<br/>UI générative (composants forensiques)"]
-        FE <-->|AG-UI/SSE| AGENT
+    subgraph AGENT["4 · Agent officiel Splunk (splunklib.ai)"]
+        SDK["Agentic Splunk SDK + Claude<br/>auto-découverte des outils MCP"]
+        A2["sortie A2UI v0.9<br/>(data model + bindings + templates)"]
+        REACT["renderer React @splunk/react-ui<br/>vue A2UI Native"]
+        SDK --> A2 --> REACT
     end
     YARA & VOL -->|"ingest_to_splunk.py (HEC)"| HEC
-    TOOLS <-->|SPL| IDX
-    AGENT <-->|tools/call| MCP
-    CLI["agent_investigate.py<br/>(client CLI alternatif)"] <-->|tools/call| MCP
-    AGENT -->|rapport| OUT["verdict + kill-chain MITRE<br/>rendu en UI générative"]
+    TOOLS <-->|SPL sûr| IDX
+    SDK <-->|"auto-discovery / tools/call"| MCP
+    SDK -->|rapport| OUT["verdict + kill-chain MITRE<br/>rendu en composants Splunk natifs"]
 ```
 
-> **Deux clients de l'agent** : un frontend web interactif ([web/](web/) — CopilotKit + ADK + AG-UI, UI générative) et un client CLI ([agent_investigate.py](agent_investigate.py) qui produit `incident_report.md`). Les deux passent par le Splunk MCP Server.
+> **Un seul agent, officiel** : l'**Agentic Splunk SDK** (`splunklib.ai`) se connecte au service Splunk, auto-découvre les outils du MCP Server et raisonne avec Claude. Sa sortie est rendue en texte (verdict) ou en **A2UI** natif (`@splunk/react-ui`).
 
 ## Composants
 
@@ -55,8 +55,9 @@ flowchart TB
 | [yara_scan.py](yara_scan.py) | Scan YARA-X de l'image mémoire → `artifacts/yara_hits.ndjson` |
 | [vol_extract.sh](vol_extract.sh) | Extraction Volatility3 (processus) → `artifacts/*.json` |
 | [ingest_to_splunk.py](ingest_to_splunk.py) | Pousse les artefacts vers l'index `forensics` via HEC |
-| [forensic_mcp_tools.json](forensic_mcp_tools.json) | Définition des 4 outils MCP forensiques custom |
-| [agent_investigate.py](agent_investigate.py) | Agent client MCP → rapport d'incident MITRE |
+| [forensic_mcp_tools.json](forensic_mcp_tools.json) | Définition des 5 outils MCP forensiques custom |
+| [splunk_app/find_evil/bin/forensic_agent_sdk.py](splunk_app/find_evil/bin/forensic_agent_sdk.py) | **Agent officiel `splunklib.ai`** → verdict + kill-chain MITRE |
+| [splunk_app/find_evil/bin/a2ui_agent.py](splunk_app/find_evil/bin/a2ui_agent.py) | Agent officiel → sortie **A2UI v0.9** (rendu React natif) |
 | [rules/apt_detection_rules.yar](rules/apt_detection_rules.yar) | 15 règles APT (calibrées SRL-2018) |
 | `forensics_ingest/` (app Splunk) | Index, HEC, dashboard *Forensic Command Center* |
 | [splunk_app/find_evil/](splunk_app/find_evil/) | **App Splunk distribuable** : nav + dashboard *AI Investigation* (contrôles natifs pilotant `\| ai`) + *Command Center* |
@@ -71,11 +72,9 @@ flowchart TB
 - **Agentic Splunk SDK** (`splunklib.ai`, SDK Python officiel 3.0) — un agent natif Splunk qui **auto-découvre les outils du MCP Server** et raisonne avec Claude, RBAC respecté. Voir [splunk_app/find_evil/bin/](splunk_app/find_evil/bin/).
 - **Splunk AI Assistant (SAIA)** — les outils `generate_spl` / `explain_spl` / `ask_splunk_question` du serveur MCP restent disponibles pour l'analyste.
 
-### Deux agents, une même couche MCP
-- **Agent natif Splunk** ([splunk_app/find_evil/bin/forensic_agent_sdk.py](splunk_app/find_evil/bin/forensic_agent_sdk.py)) — `splunklib.ai` + Claude, auto-découverte des outils MCP. Le chemin le plus Splunk-natif.
-- **Agent web** ([web/agent/](web/agent/)) — ADK + CopilotKit, pour l'UI générative (AG-UI).
-
-**A2UI piloté par l'agent SDK** : [splunk_app/find_evil/bin/a2ui_agent.py](splunk_app/find_evil/bin/a2ui_agent.py) fait produire à l'agent `splunklib.ai` une sortie structurée convertie au format **A2UI** (https://a2ui.org), rendue en composants `@splunk/react-ui` natifs dans la vue *A2UI Native*.
+### L'agent officiel Splunk (`splunklib.ai`)
+- [splunk_app/find_evil/bin/forensic_agent_sdk.py](splunk_app/find_evil/bin/forensic_agent_sdk.py) — l'**Agentic Splunk SDK** + Claude, **auto-découverte des outils MCP**, RBAC respecté. Sortie : verdict + kill-chain MITRE.
+- [splunk_app/find_evil/bin/a2ui_agent.py](splunk_app/find_evil/bin/a2ui_agent.py) — le même agent en **sortie structurée**, convertie au format **A2UI v0.9** (https://a2ui.org : data model + bindings + templates), rendue en composants `@splunk/react-ui` natifs (vue *A2UI Native*).
 
 ## Les 5 outils forensiques (le différenciateur MCP)
 
@@ -123,8 +122,13 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 # 4. Ingestion dans Splunk
 .venv/bin/python ingest_to_splunk.py
 
-# 5. Investigation agentique → rapport d'incident
-.venv/bin/python agent_investigate.py
+# 5. Investigation par l'agent officiel Splunk (splunklib.ai)
+#    (SDK vendorisé dans l'app : pip install --target=splunk_app/find_evil/lib "splunk-sdk[ai,anthropic]")
+SPLUNK_HOME=/Applications/Splunk SPLUNK_PASSWORD=... \
+  python splunk_app/find_evil/bin/forensic_agent_sdk.py "Ce DC est-il compromis ?"
+# ou produire l'A2UI rendu dans Splunk :
+SPLUNK_HOME=/Applications/Splunk SPLUNK_PASSWORD=... \
+  python splunk_app/find_evil/bin/a2ui_agent.py
 ```
 
 ### Connexion d'un client MCP (Claude Desktop / Code)

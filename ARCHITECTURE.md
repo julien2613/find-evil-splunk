@@ -2,12 +2,13 @@
 
 > Diagramme d'architecture requis par le hackathon : interaction avec Splunk,
 > intégration des modèles/agents IA, et flux de données entre services.
+> Projet recentré sur l'**agent officiel Splunk** (`splunklib.ai`).
 
 ## Vue d'ensemble
 
 ```mermaid
 flowchart TB
-    subgraph EV["1 · Couche Évidence"]
+    subgraph EV["1 · Évidence"]
         IMG["base-dc-memory.img<br/>DC Windows Server 2016 — SRL-2018 (5 Go)"]
         YARA["YARA-X<br/>apt_detection_rules.yar (15 règles APT)"]
         VOL["Volatility3<br/>windows.psscan (124 processus)"]
@@ -16,12 +17,12 @@ flowchart TB
 
     subgraph SPL["2 · Splunk Enterprise (local) — plan de données"]
         HEC["HTTP Event Collector :8088"]
-        IDX["index=forensics<br/>sourcetypes : forensics:process · forensics:yara_hit"]
-        DASH["Dashboards (Splunk Web :8000)<br/>Command Center · AI Investigation · A2UI"]
+        IDX["index=forensics<br/>forensics:process · forensics:yara_hit · forensics:incident"]
+        DASH["Dashboards (Splunk Web :8000)<br/>SOC Incidents · AI Investigation · A2UI Native · Command Center"]
         HEC --> IDX --> DASH
     end
 
-    subgraph MCP["3 · Plan de contrôle agentique"]
+    subgraph MCP["3 · Plan de contrôle"]
         SRV["Splunk MCP Server (officiel, app 7931)<br/>/services/mcp :8089"]
         TOOLS["5 outils forensiques custom<br/>find_attack_techniques · triage_summary<br/>investigate_process · attack_timeline · ai_triage"]
         AITK["Splunk AI Toolkit — commande | ai<br/>(connexion LLM 'claude')"]
@@ -29,50 +30,45 @@ flowchart TB
         TOOLS -. "ai_triage" .-> AITK
     end
 
-    subgraph AI["4 · Agents & UI"]
-        ADK["Agent ADK (Claude via LiteLLM)<br/>FastAPI/AG-UI :8800"]
-        FE["Frontend CopilotKit (UI générative) :3000"]
-        CLI["agent_investigate.py (client CLI)"]
-        A2["Serveur A2UI :8801<br/>+ renderer React @splunk/react-ui"]
+    subgraph AGENT["4 · Agent officiel Splunk (splunklib.ai)"]
+        SDK["Agentic Splunk SDK + Claude<br/>find_evil/bin/forensic_agent_sdk.py"]
+        A2AGENT["A2UI : find_evil/bin/a2ui_agent.py<br/>sortie structurée -> A2UI v0.9"]
+        REACT["renderer React @splunk/react-ui<br/>vue A2UI Native"]
+        SDK --> A2AGENT --> REACT
+    end
+
+    subgraph WF["5 · Workflow SOC automatisé"]
+        ALERT["Alerte planifiée (savedsearches.conf)<br/>détecte YARA critique -> | ai -> collect"]
     end
 
     YARA & VOL -->|"ingest_to_splunk.py (HEC)"| HEC
     TOOLS <-->|"SPL sûr (safe-SPL)"| IDX
     AITK -->|"| ai prompt"| LLM["LLM Claude (Anthropic)"]
-    ADK <-->|"tools/call (JSON-RPC)"| SRV
-    CLI <-->|"tools/call"| SRV
-    A2 <-->|"tools/call"| SRV
-    FE <-->|"AG-UI / SSE"| ADK
-    ADK -->|"rapport"| OUT["Verdict + kill-chain MITRE + remédiation"]
-    A2 -->|"A2UI JSONL"| DASH
+    SDK <-->|"auto-discovery / tools/call"| SRV
+    ALERT -->|"incident notable"| IDX
+    SDK -->|rapport| OUT["verdict + kill-chain MITRE + remédiation"]
 ```
 
-## Flux de données (séquence)
+## Flux de données
 
-1. **Extraction** — `yara_scan.py` (YARA-X) et `vol_extract.sh` (Volatility3) analysent
-   l'image mémoire → artefacts JSON (détections + processus).
-2. **Ingestion** — `ingest_to_splunk.py` pousse les artefacts dans l'index `forensics`
-   via le **HTTP Event Collector**, en préservant l'heure réelle des événements
-   (`_time` = heure de création des processus / d'acquisition).
-3. **Exposition** — le **Splunk MCP Server** officiel expose 5 outils forensiques
-   custom (enregistrés via `/services/mcp_tools`), qui traduisent des intentions
-   d'investigation en **SPL sûr** (whitelist safe-SPL) contre l'index `forensics`.
-4. **Raisonnement IA — 2 chemins** :
-   - **Dans Splunk** : l'outil `ai_triage` exécute la commande **`| ai`** de l'AI
-     Toolkit → envoie les détections au LLM Claude → verdict natif SPL.
-   - **Agent** : l'**agent ADK (Claude)** appelle les outils via `tools/call`
-     (JSON-RPC), orchestre l'investigation et produit un rapport d'incident MITRE.
-5. **Restitution** — trois surfaces : frontend **CopilotKit** (UI générative via
-   AG-UI), **dashboards Splunk** (Command Center, AI Investigation), et rendu
-   **A2UI** en composants React natifs Splunk (`@splunk/react-ui`).
+1. **Extraction** — `yara_scan.py` (YARA-X) et `vol_extract.sh` (Volatility3) → artefacts JSON.
+2. **Ingestion** — `ingest_to_splunk.py` pousse les artefacts dans l'index `forensics` via HEC.
+3. **Exposition** — le **Splunk MCP Server** officiel expose 5 outils forensiques custom (SPL sûr).
+4. **Agent officiel** — l'**Agentic Splunk SDK** (`splunklib.ai`) se connecte au service Splunk,
+   **auto-découvre les outils du MCP Server**, raisonne avec Claude, et produit :
+   - un **verdict texte** (`forensic_agent_sdk.py`), ou
+   - une **sortie A2UI v0.9** (`a2ui_agent.py`) rendue en composants `@splunk/react-ui`.
+5. **IA dans le SPL** — l'outil `ai_triage` exécute la commande **`| ai`** de l'AI Toolkit (LLM natif SPL).
+6. **Workflow SOC** — une alerte planifiée détecte les détections critiques, lance le triage IA
+   (`| ai`) et écrit un **incident notable** (`forensics:incident`) → dashboard *SOC Incidents*.
 
-## Capacités Splunk AI utilisées
+## Capacités Splunk AI
 
-| Capacité | Rôle | Composant |
-|---|---|---|
-| **Splunk MCP Server** (officiel) | Plan de contrôle de l'agent | `/services/mcp` |
-| **Outils MCP custom** | 5 outils forensiques métier | `forensic_mcp_tools.json` |
-| **Splunk AI Toolkit** (`\| ai`) | Raisonnement IA natif SPL | `forensics_ai_triage` |
+| Capacité | Composant |
+|---|---|
+| **Splunk MCP Server** (officiel) | `/services/mcp` + 5 outils custom |
+| **Splunk AI Toolkit** (`\| ai`) | outil `forensics_ai_triage` + workflow |
+| **Agentic Splunk SDK** (`splunklib.ai`) | agent officiel (texte + A2UI) |
 
 ## Ports & services (local)
 
@@ -81,6 +77,3 @@ flowchart TB
 | Splunk Web | 8000 |
 | Splunk management / MCP (`/services/mcp`) | 8089 |
 | HTTP Event Collector | 8088 |
-| Agent ADK (AG-UI) | 8800 |
-| Serveur A2UI | 8801 |
-| Frontend CopilotKit | 3000 |
