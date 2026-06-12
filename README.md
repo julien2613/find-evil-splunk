@@ -68,7 +68,12 @@ flowchart TB
 - **Splunk MCP Server** (officiel, app Splunkbase 7931) — plan de contrôle de l'agent, expose les outils sur `/services/mcp`.
 - **Outils MCP custom** — 5 outils forensiques métier enregistrés via `/services/mcp_tools`, qui traduisent des intentions d'investigation en SPL sûr.
 - **Splunk AI Toolkit** (app Splunkbase 2890) — la commande SPL **`| ai`** fait analyser les détections par un LLM **directement dans le moteur Splunk** (outil `forensics_ai_triage`). L'IA devient partie du langage de recherche.
+- **Agentic Splunk SDK** (`splunklib.ai`, SDK Python officiel 3.0) — un agent natif Splunk qui **auto-découvre les outils du MCP Server** et raisonne avec Claude, RBAC respecté. Voir [splunk_app/find_evil/bin/](splunk_app/find_evil/bin/).
 - **Splunk AI Assistant (SAIA)** — les outils `generate_spl` / `explain_spl` / `ask_splunk_question` du serveur MCP restent disponibles pour l'analyste.
+
+### Deux agents, une même couche MCP
+- **Agent natif Splunk** ([splunk_app/find_evil/bin/forensic_agent_sdk.py](splunk_app/find_evil/bin/forensic_agent_sdk.py)) — `splunklib.ai` + Claude, auto-découverte des outils MCP. Le chemin le plus Splunk-natif.
+- **Agent web** ([web/agent/](web/agent/)) — ADK + CopilotKit, pour l'UI générative (AG-UI).
 
 ## Les 5 outils forensiques (le différenciateur MCP)
 

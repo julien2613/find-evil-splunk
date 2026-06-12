@@ -24,3 +24,7 @@ artifacts/
 *.spl
 web/frontend/tsconfig.tsbuildinfo
 web/frontend/next-env.d.ts
+
+# SDK Splunk vendorisé dans l'app (reproductible via pip install --target)
+splunk_app/find_evil/lib/
+web/splunk_agent/.venv/
