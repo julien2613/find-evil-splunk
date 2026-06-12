@@ -20,3 +20,9 @@ artifacts/
 *.spl
 splunk_app/find_evil/lib/
 web/splunk_react/tsconfig.tsbuildinfo
+
+# Outillage captures d'écran (lourd)
+img/node_modules/
+img/package.json
+img/package-lock.json
+img/reshoot.mjs
