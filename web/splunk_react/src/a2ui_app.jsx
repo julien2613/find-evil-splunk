@@ -105,12 +105,13 @@ function renderNode(id, map, depth = 0) {
                 </span>
             );
         }
-        if (v === 'h1') return <Heading key={id} level={1}>{txt}</Heading>;
-        if (v === 'h2') return <Heading key={id} level={2}>{txt}</Heading>;
-        if (v === 'markdown') {
-            return <Markdown key={id} text={txt} />;
-        }
-        return <Paragraph key={id}>{txt}</Paragraph>;
+        // variant ∈ {h1..h5, caption, body} (catalogue A2UI v0.9). Les titres -> Heading.
+        const m = /^h([1-5])$/.exec(v);
+        if (m) return <Heading key={id} level={Number(m[1])}>{txt}</Heading>;
+        if (v === 'caption')
+            return <Paragraph key={id} style={{ fontSize: 12, color: '#8a8a9a' }}>{txt}</Paragraph>;
+        // body (défaut) — le texte A2UI supporte le markdown nativement.
+        return <Markdown key={id} text={txt} />;
     }
     return <div key={id}>[{t}]</div>;
 }

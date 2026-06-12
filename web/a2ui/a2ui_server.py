@@ -86,21 +86,20 @@ def build_a2ui():
         rid = f"tech_{i}"
         tid = f"{rid}_t"
         tech_ids.append(rid)
-        label = f"[{t.get('severity','').upper()}] {t.get('rule','')} — {t.get('mitre','')} — {t.get('description','')}"
+        label = f"**[{t.get('severity','').upper()}]** {t.get('rule','')} — `{t.get('mitre','')}` — {t.get('description','')}"
         components.append({"id": rid, "component": "Card", "child": tid})
-        components.append({"id": tid, "component": "Text", "text": label,
-                           "severity": t.get("severity", "unknown")})
+        components.append({"id": tid, "component": "Text", "variant": "body", "text": label})
     components.append({"id": "tech_list", "component": "List", "children": tech_ids})
 
     # AI analysis
     components.append({"id": "ai_heading", "component": "Text", "variant": "h2",
                        "text": "Analyse IA (| ai → Claude, via Splunk AI Toolkit)"})
     components.append({"id": "ai_card", "component": "Card", "child": "ai_text"})
-    components.append({"id": "ai_text", "component": "Text", "variant": "markdown", "text": ai_text})
+    components.append({"id": "ai_text", "component": "Text", "variant": "body", "text": ai_text})
 
     lines.append(_msg({
         "version": VERSION,
-        "updateComponents": {"surfaceId": SURFACE, "root": "root", "components": components},
+        "updateComponents": {"surfaceId": SURFACE, "components": components},
     }))
     return "\n".join(lines)
 

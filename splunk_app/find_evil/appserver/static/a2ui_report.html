@@ -54,14 +54,14 @@
         if (c.child) el.appendChild(renderComponent(c.child, map));
         (c.children || []).forEach(function(cid){ el.appendChild(renderComponent(cid, map)); });
       } else if (type === "Text") {
+        // variant ∈ {h1..h5, caption, body} (catalogue A2UI v0.9).
         var variant = c.variant || "body";
-        if (variant === "h1") { el = document.createElement("h1"); el.className = "a2-h1"; }
-        else if (variant === "h2") { el = document.createElement("h2"); el.className = "a2-h2"; }
+        var hm = /^h([1-5])$/.exec(variant);
+        if (hm) { el = document.createElement("h" + hm[1]); el.className = "a2-h" + (hm[1] <= 2 ? hm[1] : "2"); }
         else { el = document.createElement("p"); el.className = "a2-text"; }
         var txt = typeof c.text === "object" ? JSON.stringify(c.text) : (c.text || "");
-        if (variant === "markdown") { el.innerHTML = miniMarkdown(txt); }
-        else { el.textContent = txt; }
-        if (c.severity) el.className += " sev-" + c.severity;
+        // Le texte A2UI supporte le markdown nativement.
+        if (hm) { el.textContent = txt; } else { el.innerHTML = miniMarkdown(txt); }
         if (id === "verdict_text") {
           el.className += " verdict";
           var b = document.createElement("span"); b.className = "badge"; b.textContent = txt;
