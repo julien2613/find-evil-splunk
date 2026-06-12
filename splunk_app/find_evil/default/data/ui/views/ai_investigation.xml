@@ -1,11 +1,11 @@
 <dashboard version="1.1" theme="light" stylesheet="find_evil.css" script="a2ui_react.js">
   <label>AI Investigation</label>
-  <description>Investigation forensique assistée par IA du contrôleur de domaine compromis (SRL-2018) — verdict, kill-chain MITRE et remédiation rendus en contrôles natifs @splunk/react-ui via A2UI.</description>
+  <description>AI-assisted forensic investigation of the compromised domain controller (SRL-2018) — verdict, MITRE kill-chain and remediation rendered as native @splunk/react-ui controls via A2UI.</description>
   <row>
     <panel>
       <html>
         <div class="fe-banner">
-          <b>✦ Triage IA → contrôles React</b> — l'agent <code>splunklib.ai</code> interroge l'index <code>forensics</code> via le Splunk MCP Server, structure son verdict, et l'expose en A2UI. Rendu info-dense ci-dessous.
+          <b>✦ AI triage → React controls</b> — the <code>splunklib.ai</code> agent queries the <code>forensics</code> index through the Splunk MCP Server, structures its verdict, and exposes it as A2UI. Information-dense rendering below.
         </div>
         <div data-a2ui-src="/static/app/find_evil/forensic_report.a2ui.json" style="min-height:600px;"></div>
       </html>

@@ -1,11 +1,11 @@
-"""Génère les snapshots A2UI des dashboards à partir de Splunk (déterministe, sans LLM).
+"""Generate the dashboard A2UI snapshots from Splunk (deterministic, no LLM).
 
-Produit, dans appserver/static, trois documents A2UI rendus par a2ui_app.jsx :
-  - forensic_report.a2ui.json : verdict + kill-chain + reco (réutilise l'analyse de l'agent)
-  - command.a2ui.json         : vue d'ensemble (KPIs, sévérité, techniques, LOLBins)
-  - incidents.a2ui.json       : incidents SOC (triage IA)
+Writes three A2UI documents in appserver/static, rendered by a2ui_app.jsx:
+  - forensic_report.a2ui.json : verdict + kill-chain + recommendations (reuses agent analysis)
+  - command.a2ui.json         : overview (KPIs, severity, techniques, LOLBins)
+  - incidents.a2ui.json       : SOC incidents (AI triage)
 
-Lancement :
+Run:
     SPLUNK_HOME=/Applications/Splunk SPLUNK_PASSWORD=... \
       python /Applications/Splunk/etc/apps/find_evil/bin/gen_a2ui.py
 """
@@ -44,7 +44,7 @@ def oneshot(service, query):
 
 
 def read_existing_forensic():
-    """Récupère verdict/analyse/techniques/reco du snapshot agent existant."""
+    """Read verdict/analysis/techniques/recommendations from the existing agent snapshot."""
     f = STATIC / "forensic_report.a2ui.json"
     if not f.exists():
         return None
@@ -59,14 +59,14 @@ def read_existing_forensic():
     if not data:
         return None
     techs = data.get("techniques", [])
-    # Compat : ancien format (label string) OU nouveau (déjà structuré)
+    # Compat: old format (label string) OR new one (already structured)
     if techs and "label" in techs[0]:
         techs = [cat.parse_tech_label(t["label"]) for t in techs]
     recos = data.get("recommendations", [])
     recos = [r["text"] if isinstance(r, dict) and "text" in r else (r.get("text") if isinstance(r, dict) else r)
              for r in recos]
     return {
-        "verdict": str(data.get("verdict", "COMPROMIS")).replace("Verdict :", "").strip(),
+        "verdict": str(data.get("verdict", "COMPROMISED")).replace("Verdict:", "").replace("Verdict :", "").strip(),
         "analysis": data.get("analysis", ""),
         "techniques": techs,
         "recommendations": [r for r in recos if r],
@@ -80,22 +80,22 @@ def gen_forensic(service):
     techs = [{"signature": t.get("signature", ""), "severity": t.get("severity", "unknown"),
               "mitre": t.get("mitre", ""), "description": t.get("description", "")} for t in techs]
     if base and base["techniques"]:
-        techs = base["techniques"]  # techniques de l'agent (déjà triées/annotées)
+        techs = base["techniques"]  # agent techniques (already sorted/annotated)
     procs = oneshot(service, "search index=forensics sourcetype=forensics:process "
                     "| stats dc(process_id) as p")
     nproc = int(procs[0]["p"]) if procs else 0
     crit = sum(1 for t in techs if t["severity"] == "critical")
     high = sum(1 for t in techs if t["severity"] == "high")
-    verdict = (base or {}).get("verdict") or "COMPROMIS"
-    summary = (f"{crit} détections critiques, {high} élevées — {len(techs)} techniques MITRE "
-               f"sur le contrôleur de domaine ({nproc} processus analysés).")
-    analysis = (base or {}).get("analysis") or "Analyse non disponible — lancer bin/a2ui_agent.py."
+    verdict = (base or {}).get("verdict") or "COMPROMISED"
+    summary = (f"{crit} critical detections, {high} high — {len(techs)} MITRE techniques "
+               f"on the domain controller ({nproc} processes analyzed).")
+    analysis = (base or {}).get("analysis") or "Analysis not available — run bin/a2ui_agent.py."
     recos = (base or {}).get("recommendations") or []
     doc = cat.build_forensic("forensic", verdict=verdict, summary=summary, analysis=analysis,
                              techniques=techs, recommendations=recos,
-                             extra_kpis=[{"label": "Processus", "value": nproc, "tone": "info"}])
+                             extra_kpis=[{"label": "Processes", "value": nproc, "tone": "info"}])
     (STATIC / "forensic_report.a2ui.json").write_text(doc)
-    print(f"  forensic : verdict={verdict} | {len(techs)} techniques | {nproc} processus")
+    print(f"  forensic : verdict={verdict} | {len(techs)} techniques | {nproc} processes")
 
 
 def gen_command(service):
@@ -112,21 +112,22 @@ def gen_command(service):
     crit = sum(1 for t in techs if t["severity"] == "critical")
     high = sum(1 for t in techs if t["severity"] == "high")
     kpis = [
-        {"label": "Critiques", "value": crit, "tone": "critical"},
-        {"label": "Élevées", "value": high, "tone": "high"},
+        {"label": "Critical", "value": crit, "tone": "critical"},
+        {"label": "High", "value": high, "tone": "high"},
         {"label": "Techniques", "value": len(techs), "tone": "neutral"},
-        {"label": "Processus", "value": nproc, "tone": "info"},
+        {"label": "Processes", "value": nproc, "tone": "info"},
     ]
-    summary = ("Contrôleur de domaine Windows Server 2016 — exfiltration d'identifiants Active "
-               "Directory (NTDS.dit + Mimikatz). Investigation pilotable par agent via Splunk MCP Server.")
-    doc = cat.build_command("command", verdict="COMPROMIS", summary=summary, kpis=kpis,
+    summary = ("Windows Server 2016 domain controller — Active Directory credential exfiltration "
+               "(NTDS.dit + Mimikatz). Agent-driven investigation via the Splunk MCP Server.")
+    doc = cat.build_command("command", verdict="COMPROMISED", summary=summary, kpis=kpis,
                             severity=cat.severity_counts(techs), techniques=techs, lolbins=lolbins)
     (STATIC / "command.a2ui.json").write_text(doc)
-    print(f"  command  : {crit} crit, {high} high | {len(lolbins)} LOLBins | {nproc} processus")
+    print(f"  command  : {crit} crit, {high} high | {len(lolbins)} LOLBins | {nproc} processes")
 
 
 def gen_incidents(service):
     rows = oneshot(service, "search index=forensics sourcetype=forensics:incident "
+                   "verdict IN (\"COMPROMISED\",\"SUSPICIOUS\",\"CLEAN\") "
                    "| sort -_time | table _time verdict critical_count high_count ai_analysis")
     incidents = []
     for r in rows:
@@ -149,15 +150,15 @@ def gen_incidents(service):
 def main():
     pwd = _secret("SPLUNK_PASSWORD", ".splunk_pass")
     if not pwd:
-        sys.exit("Manque SPLUNK_PASSWORD")
+        sys.exit("Missing SPLUNK_PASSWORD")
     service = connect(scheme="https", host="localhost", port=8089,
                       username=os.environ.get("SPLUNK_USERNAME", "julien"),
                       password=pwd, autologin=True, verify=False)
-    print("[gen_a2ui] génération des snapshots A2UI…")
+    print("[gen_a2ui] generating A2UI snapshots…")
     gen_forensic(service)
     gen_command(service)
     gen_incidents(service)
-    print("OK — snapshots écrits dans", STATIC)
+    print("OK — snapshots written to", STATIC)
 
 
 if __name__ == "__main__":

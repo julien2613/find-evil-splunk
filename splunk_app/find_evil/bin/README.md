@@ -1,36 +1,36 @@
-# Agent forensique natif Splunk (splunklib.ai)
+# Native Splunk forensic agent (splunklib.ai)
 
-`forensic_agent_sdk.py` utilise l'**Agentic Splunk SDK** officiel (`splunklib.ai`,
-SDK Python 3.0) : il se connecte au service Splunk, **auto-découvre les outils du
-Splunk MCP Server** (nos 5 outils forensiques) et raisonne avec Claude — RBAC respecté.
+`forensic_agent_sdk.py` uses the official **Agentic Splunk SDK** (`splunklib.ai`,
+Python SDK 3.0): it connects to the Splunk service, **auto-discovers the tools of the
+Splunk MCP Server** (our 5 forensic tools) and reasons with Claude — RBAC enforced.
 
-## Déploiement (pattern app Splunk : SDK vendorisé dans lib/)
+## Deployment (Splunk app pattern: SDK vendored in lib/)
 ```bash
 cd $SPLUNK_HOME/etc/apps/find_evil
-pip install --target=lib "splunk-sdk[ai,anthropic]"   # ~93 Mo, non committé
+pip install --target=lib "splunk-sdk[ai,anthropic]"   # ~93 MB, not committed
 ```
 
-## Lancement
+## Run
 ```bash
-export ANTHROPIC_API_KEY=...        # ou ../../.anthropic_key
+export ANTHROPIC_API_KEY=...        # or ../../.anthropic_key
 SPLUNK_HOME=/Applications/Splunk SPLUNK_PASSWORD=... \
-  python bin/forensic_agent_sdk.py "Ce DC est-il compromis ?"
+  python bin/forensic_agent_sdk.py "Is this DC compromised?"
 ```
-Sortie : liste des outils auto-découverts + verdict (COMPROMIS) + kill-chain MITRE.
+Output: list of auto-discovered tools + verdict (COMPROMISED) + MITRE kill-chain.
 
 ## A2UI × Splunk SDK (`a2ui_agent.py`)
 
-Intègre **A2UI** (https://a2ui.org) avec l'Agentic Splunk SDK : l'agent investigue via
-les outils MCP, renvoie une **sortie structurée** (`output_schema` pydantic), convertie
-en **A2UI JSONL** et écrite dans `appserver/static/forensic_report.a2ui.json`. La vue
-**A2UI Native** la rend en composants `@splunk/react-ui`.
+Integrates **A2UI** (https://a2ui.org) with the Agentic Splunk SDK: the agent investigates via
+the MCP tools, returns a **structured output** (pydantic `output_schema`), converted
+to **A2UI JSONL** and written to `appserver/static/forensic_report.a2ui.json`. The
+**A2UI Native** view renders it as `@splunk/react-ui` components.
 
-Pipeline : Agent SDK (tools MCP) → structured_output → A2UI → render React Splunk.
+Pipeline: SDK Agent (MCP tools) → structured_output → A2UI → render React Splunk.
 
 ```bash
 SPLUNK_HOME=/Applications/Splunk SPLUNK_PASSWORD=... \
   python bin/a2ui_agent.py
-# -> verdict + A2UI écrit ; rendu sur /app/find_evil/a2ui_native
+# -> verdict + A2UI written; rendered at /app/find_evil/a2ui_native
 ```
-> N.B. : allowlist limitée aux outils sans `row_limit` (Anthropic strict refuse les
-> contraintes min/max sur les entiers).
+> N.B.: allowlist limited to tools without `row_limit` (Anthropic strict refuses
+> min/max constraints on integers).

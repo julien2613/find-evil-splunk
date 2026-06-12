@@ -1,16 +1,16 @@
-"""Agent forensique natif Splunk (splunklib.ai) — déployé dans l'app find_evil.
+"""Native Splunk forensic agent (splunklib.ai) — deployed inside the find_evil app.
 
-Le SDK est vendorisé dans find_evil/lib/ ; en l'important en premier, locate_app()
-résout l'app-id 'find_evil' et l'agent auto-découvre les outils du Splunk MCP Server.
+The SDK is vendored in find_evil/lib/; importing it first lets locate_app() resolve
+the app-id 'find_evil' and the agent auto-discovers the Splunk MCP Server tools.
 
-Lancement :
+Run:
     SPLUNK_HOME=/Applications/Splunk SPLUNK_PASSWORD=... \
       python /Applications/Splunk/etc/apps/find_evil/bin/forensic_agent_sdk.py "question"
 """
 import os
 import sys
 
-# Vendoring : la lib de l'app doit primer pour que locate_app() trouve find_evil.
+# Vendoring: the app lib must take precedence so locate_app() finds find_evil.
 _LIB = os.path.join(os.path.dirname(__file__), "..", "lib")
 sys.path.insert(0, os.path.abspath(_LIB))
 
@@ -32,12 +32,12 @@ FORENSIC_TOOLS = [
     "forensics_ai_triage",
 ]
 
-SYSTEM_PROMPT = """Tu es un analyste forensique senior en réponse à incident.
-Tu investigues une image mémoire d'un contrôleur de domaine Windows Server 2016
-(scénario SRL-2018) via tes outils, qui interrogent Splunk.
-Commence par le triage et les techniques d'attaque, pivote sur les processus suspects,
-reconstruis la chronologie. Conclus par un verdict (COMPROMIS/SUSPECT/RAS), la
-kill-chain MITRE ATT&CK et des recommandations. Réponds en français, concis, cite les T-codes."""
+SYSTEM_PROMPT = """You are a senior incident-response forensic analyst.
+You investigate a memory image of a Windows Server 2016 domain controller
+(SRL-2018 scenario) through your tools, which query Splunk.
+Start with triage and attack techniques, pivot to suspicious processes, and
+reconstruct the timeline. Conclude with a verdict (COMPROMISED/SUSPICIOUS/CLEAN), the
+MITRE ATT&CK kill-chain and recommendations. Answer in English, concise, cite the T-codes."""
 
 
 def _secret(env_name, file_name):
@@ -49,11 +49,11 @@ def _secret(env_name, file_name):
 
 
 async def main():
-    question = sys.argv[1] if len(sys.argv) > 1 else "Ce contrôleur de domaine est-il compromis ?"
+    question = sys.argv[1] if len(sys.argv) > 1 else "Is this domain controller compromised?"
     anthropic_key = _secret("ANTHROPIC_API_KEY", ".anthropic_key")
     splunk_pass = _secret("SPLUNK_PASSWORD", ".splunk_pass")
     if not anthropic_key or not splunk_pass:
-        sys.exit("Manque ANTHROPIC_API_KEY ou SPLUNK_PASSWORD")
+        sys.exit("Missing ANTHROPIC_API_KEY or SPLUNK_PASSWORD")
 
     service = connect(
         scheme="https", host="localhost", port=8089,
@@ -73,7 +73,7 @@ async def main():
     ) as agent:
         print(f"[Agent Splunk SDK] {question}\n")
         try:
-            print("Outils découverts :", [t.name for t in agent._tools])
+            print("Discovered tools:", [t.name for t in agent._tools])
         except Exception:
             pass
         result = await agent.invoke([HumanMessage(content=question)])

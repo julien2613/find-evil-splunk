@@ -4,17 +4,17 @@
     {
       "name": "find_attack_techniques",
       "title": "Find Attack Techniques",
-      "description": "Liste toutes les détections YARA sur l'image mémoire, triées par sévérité, avec leur technique MITRE ATT&CK. Utiliser en premier pour répondre à 'cette machine est-elle compromise ?' — donne la vue d'ensemble de la kill-chain détectée.",
+      "description": "List every YARA detection on the memory image, sorted by severity, with their MITRE ATT&CK technique. Use this first to answer 'is this machine compromised?' — it gives the overview of the detected kill-chain.",
       "inputSchema": { "type": "object", "properties": {} },
       "_meta": {
         "external_app_id": "forensics",
         "tags": ["security", "forensics", "yara", "mitre", "triage"],
         "examples": [
           {
-            "name": "Vue d'ensemble des menaces",
-            "description": "Toutes les détections APT classées par criticité",
+            "name": "Threat overview",
+            "description": "All APT detections ranked by criticality",
             "arguments": {},
-            "expected_use": "Premier pivot d'une investigation forensique"
+            "expected_use": "First pivot of a forensic investigation"
           }
         ],
         "execution": {
@@ -28,13 +28,13 @@
     {
       "name": "investigate_process",
       "title": "Investigate Process",
-      "description": "Recherche un ou plusieurs processus par nom (ex. powershell.exe, cmd.exe, ntdsutil.exe) dans l'image mémoire du contrôleur de domaine. Retourne PID, PPID, heure de création, session. Utiliser pour pivoter depuis une détection YARA vers le processus responsable.",
+      "description": "Search one or more processes by name (e.g. powershell.exe, cmd.exe, ntdsutil.exe) in the domain controller memory image. Returns PID, PPID, creation time, session. Use it to pivot from a YARA detection to the responsible process.",
       "inputSchema": {
         "type": "object",
         "properties": {
           "process_name": {
             "type": "string",
-            "description": "Nom du processus à investiguer (ex. powershell.exe). Les wildcards SPL sont supportés (ex. *.exe).",
+            "description": "Process name to investigate (e.g. powershell.exe). SPL wildcards are supported (e.g. *.exe).",
             "pattern": "^[A-Za-z0-9_.*-]+$"
           }
         },
@@ -45,10 +45,10 @@
         "tags": ["security", "forensics", "process", "pivot"],
         "examples": [
           {
-            "name": "Chasser PowerShell",
-            "description": "Retrouver les instances PowerShell suspectes",
+            "name": "Hunt PowerShell",
+            "description": "Find suspicious PowerShell instances",
             "arguments": { "process_name": "powershell.exe" },
-            "expected_use": "Pivot après détection PowerShell_Obfuscated_Execution"
+            "expected_use": "Pivot after a PowerShell_Obfuscated_Execution detection"
           }
         ],
         "execution": {
@@ -62,17 +62,17 @@
     {
       "name": "attack_timeline",
       "title": "Attack Timeline",
-      "description": "Reconstruit la chronologie de l'attaque en fusionnant processus et détections YARA sur un axe temporel unique. Chaque ligne porte l'horodatage réel, l'artefact (règle ou processus), la technique MITRE et la sévérité. Utiliser pour raconter le déroulé de l'incident.",
+      "description": "Reconstruct the attack timeline by merging processes and YARA detections on a single time axis. Each row carries the real timestamp, the artifact (rule or process), the MITRE technique and the severity. Use it to tell the incident story.",
       "inputSchema": { "type": "object", "properties": {} },
       "_meta": {
         "external_app_id": "forensics",
         "tags": ["security", "forensics", "timeline", "incident-response", "mitre"],
         "examples": [
           {
-            "name": "Chronologie de l'incident",
-            "description": "Vue temporelle unifiée processus + détections",
+            "name": "Incident timeline",
+            "description": "Unified time view of processes + detections",
             "arguments": {},
-            "expected_use": "Construire le récit de l'attaque pour le rapport"
+            "expected_use": "Build the attack narrative for the report"
           }
         ],
         "execution": {
@@ -86,17 +86,17 @@
     {
       "name": "triage_summary",
       "title": "Triage Summary",
-      "description": "Résumé de triage : nombre de détections par sévérité et par technique MITRE ATT&CK. Donne une lecture rapide de l'ampleur et de la nature de la compromission. Utiliser pour prioriser la réponse.",
+      "description": "Triage summary: number of detections by severity and by MITRE ATT&CK technique. Gives a quick read on the scope and nature of the compromise. Use it to prioritize the response.",
       "inputSchema": { "type": "object", "properties": {} },
       "_meta": {
         "external_app_id": "forensics",
         "tags": ["security", "forensics", "triage", "mitre", "summary"],
         "examples": [
           {
-            "name": "Priorisation",
-            "description": "Compter les détections par sévérité et technique",
+            "name": "Prioritization",
+            "description": "Count detections by severity and technique",
             "arguments": {},
-            "expected_use": "Prioriser la réponse à incident"
+            "expected_use": "Prioritize incident response"
           }
         ],
         "execution": {

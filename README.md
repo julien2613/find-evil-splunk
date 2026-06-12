@@ -1,23 +1,23 @@
 # Find Evil — Agentic Memory Forensics with Splunk
 
-> **Splunk Agentic Ops Hackathon 2026 — piste Sécurité**
-> Un agent IA qui investigue une image mémoire de contrôleur de domaine compromis en interrogeant Splunk en langage naturel, via le **Splunk MCP Server** officiel et des outils forensiques métier.
+> **Splunk Agentic Ops Hackathon 2026 — Security track**
+> An AI agent that investigates a compromised domain controller memory image by querying Splunk in natural language, via the official **Splunk MCP Server** and purpose-built forensic tools.
 
-## Le problème
+## The problem
 
-L'analyse de forensique mémoire est lente et réservée aux experts : monter le dump, lancer Volatility, scanner avec YARA, corréler à la main des centaines de processus et de hits. Pendant ce temps, l'attaquant exfiltre `NTDS.dit`.
+Memory forensics is slow and reserved for experts: mount the dump, run Volatility, scan with YARA, and manually correlate hundreds of processes and hits. Meanwhile, the attacker exfiltrates `NTDS.dit`.
 
-## La solution
+## The solution
 
-On transforme Splunk en **base de données forensique requêtable par un agent**. Les artefacts d'une image mémoire (processus, détections YARA mappées MITRE ATT&CK) sont ingérés dans un index Splunk, puis exposés à un agent LLM via le **Splunk MCP Server** et **4 outils forensiques custom**. L'analyste pose une question — *« ce contrôleur de domaine est-il compromis ? »* — et l'agent pivote, corrèle et produit un **rapport d'incident MITRE** en quelques secondes.
+We turn Splunk into a **forensic database that an agent can query**. The artifacts from a memory image (processes, YARA detections mapped to MITRE ATT&CK) are ingested into a Splunk index, then exposed to an LLM agent via the **Splunk MCP Server** and **4 custom forensic tools**. The analyst asks a question — *"is this domain controller compromised?"* — and the agent pivots, correlates, and produces a **MITRE incident report** in a few seconds.
 
-Cas de démonstration : `base-dc-memory.img` (5 Go), un DC Windows Server 2016 du scénario public **SRL-2018**, compromis par une chaîne d'exfiltration d'identifiants Active Directory.
+Demonstration case: `base-dc-memory.img` (5 GB), a Windows Server 2016 DC from the public **SRL-2018** scenario, compromised by an Active Directory credential exfiltration chain.
 
 ## Architecture
 
 ```mermaid
 flowchart TB
-    subgraph EV["1 · Évidence"]
+    subgraph EV["1 · Evidence"]
         IMG["base-dc-memory.img<br/>DC Windows Server 2016"]
         YARA["YARA-X<br/>apt_detection_rules.yar"]
         VOL["Volatility3<br/>windows.psscan"]
@@ -29,110 +29,110 @@ flowchart TB
         DASH["Dashboard Studio<br/>Forensic Command Center"]
         SDKING --> IDX --> DASH
     end
-    subgraph AG["3 · Couche agentique"]
-        MCP["Splunk MCP Server (officiel)<br/>/services/mcp"]
-        TOOLS["5 outils forensiques custom<br/>find_attack_techniques · triage_summary · investigate_process<br/>attack_timeline · ai_triage (| ai)"]
+    subgraph AG["3 · Agentic layer"]
+        MCP["Splunk MCP Server (official)<br/>/services/mcp"]
+        TOOLS["5 custom forensic tools<br/>find_attack_techniques · triage_summary · investigate_process<br/>attack_timeline · ai_triage (| ai)"]
         MCP --> TOOLS
     end
-    subgraph AGENT["4 · Agent officiel Splunk (splunklib.ai)"]
-        SDK["Agentic Splunk SDK + Claude<br/>auto-découverte des outils MCP"]
-        A2["sortie A2UI v0.9<br/>(data model + bindings + templates)"]
-        REACT["renderer React @splunk/react-ui<br/>vue A2UI Native"]
+    subgraph AGENT["4 · Official Splunk agent (splunklib.ai)"]
+        SDK["Agentic Splunk SDK + Claude<br/>auto-discovery of MCP tools"]
+        A2["A2UI v0.9 output<br/>(data model + bindings + templates)"]
+        REACT["React renderer @splunk/react-ui<br/>A2UI Native view"]
         SDK --> A2 --> REACT
     end
     YARA & VOL -->|"ingest_to_splunk.py (splunk-sdk)"| HEC
-    TOOLS <-->|SPL sûr| IDX
+    TOOLS <-->|safe SPL| IDX
     SDK <-->|"auto-discovery / tools/call"| MCP
-    SDK -->|rapport| OUT["verdict + kill-chain MITRE<br/>rendu en composants Splunk natifs"]
+    SDK -->|report| OUT["verdict + MITRE kill-chain<br/>rendered in native Splunk components"]
 ```
 
-> **Un seul agent, officiel** : l'**Agentic Splunk SDK** (`splunklib.ai`) se connecte au service Splunk, auto-découvre les outils du MCP Server et raisonne avec Claude. Sa sortie est rendue en texte (verdict) ou en **A2UI** natif (`@splunk/react-ui`).
+> **A single, official agent**: the **Agentic Splunk SDK** (`splunklib.ai`) connects to the Splunk service, auto-discovers the MCP Server tools, and reasons with Claude. Its output is rendered as text (verdict) or native **A2UI** (`@splunk/react-ui`).
 
-## Composants
+## Components
 
-| Fichier | Rôle |
+| File | Role |
 |---|---|
-| [yara_scan.py](yara_scan.py) | Scan YARA-X de l'image mémoire → `artifacts/yara_hits.ndjson` |
-| [vol_extract.py](vol_extract.py) | Extraction Volatility3 (processus) → `artifacts/*.json` |
-| [ingest_to_splunk.py](ingest_to_splunk.py) | Pousse les artefacts vers l'index `forensics` via HEC |
-| [forensic_mcp_tools.json](forensic_mcp_tools.json) | Définition des 5 outils MCP forensiques custom |
-| [splunk_app/find_evil/bin/forensic_agent_sdk.py](splunk_app/find_evil/bin/forensic_agent_sdk.py) | **Agent officiel `splunklib.ai`** → verdict + kill-chain MITRE |
-| [splunk_app/find_evil/bin/a2ui_agent.py](splunk_app/find_evil/bin/a2ui_agent.py) | Agent officiel → sortie **A2UI v0.9** (rendu React natif) |
-| [rules/apt_detection_rules.yar](rules/apt_detection_rules.yar) | 15 règles APT (calibrées SRL-2018) |
-| `forensics_ingest/` (app Splunk) | Index, HEC, dashboard *Forensic Command Center* |
-| [splunk_app/find_evil/](splunk_app/find_evil/) | **App Splunk distribuable** : nav + dashboard *AI Investigation* (contrôles natifs pilotant `\| ai`) + *Command Center* |
-| [forensic_ai_tool.json](forensic_ai_tool.json) | Outil MCP `ai_triage` (`\| ai` via AI Toolkit) |
-| [AI_TOOLKIT_SETUP.md](AI_TOOLKIT_SETUP.md) | Procédure d'installation du AI Toolkit (PSC, rôle, connexion) |
+| [yara_scan.py](yara_scan.py) | YARA-X scan of the memory image → `artifacts/yara_hits.ndjson` |
+| [vol_extract.py](vol_extract.py) | Volatility3 extraction (processes) → `artifacts/*.json` |
+| [ingest_to_splunk.py](ingest_to_splunk.py) | Pushes artifacts to the `forensics` index via HEC |
+| [forensic_mcp_tools.json](forensic_mcp_tools.json) | Definition of the 5 custom forensic MCP tools |
+| [splunk_app/find_evil/bin/forensic_agent_sdk.py](splunk_app/find_evil/bin/forensic_agent_sdk.py) | **Official `splunklib.ai` agent** → verdict + MITRE kill-chain |
+| [splunk_app/find_evil/bin/a2ui_agent.py](splunk_app/find_evil/bin/a2ui_agent.py) | Official agent → **A2UI v0.9** output (native React rendering) |
+| [rules/apt_detection_rules.yar](rules/apt_detection_rules.yar) | 15 APT rules (calibrated for SRL-2018) |
+| `forensics_ingest/` (Splunk app) | Index, HEC, *Forensic Command Center* dashboard |
+| [splunk_app/find_evil/](splunk_app/find_evil/) | **Distributable Splunk app**: nav + *AI Investigation* dashboard (native controls driving `\| ai`) + *Command Center* |
+| [forensic_ai_tool.json](forensic_ai_tool.json) | `ai_triage` MCP tool (`\| ai` via the AI Toolkit) |
+| [AI_TOOLKIT_SETUP.md](AI_TOOLKIT_SETUP.md) | AI Toolkit installation procedure (PSC, role, connection) |
 
-## Capacités Splunk AI utilisées
+## Splunk AI capabilities used
 
-- **Splunk MCP Server** (officiel, app Splunkbase 7931) — plan de contrôle de l'agent, expose les outils sur `/services/mcp`.
-- **Outils MCP custom** — 5 outils forensiques métier enregistrés via `/services/mcp_tools`, qui traduisent des intentions d'investigation en SPL sûr.
-- **Splunk AI Toolkit** (app Splunkbase 2890) — la commande SPL **`| ai`** fait analyser les détections par un LLM **directement dans le moteur Splunk** (outil `forensics_ai_triage`). L'IA devient partie du langage de recherche.
-- **Agentic Splunk SDK** (`splunklib.ai`, SDK Python officiel 3.0) — un agent natif Splunk qui **auto-découvre les outils du MCP Server** et raisonne avec Claude, RBAC respecté. Voir [splunk_app/find_evil/bin/](splunk_app/find_evil/bin/).
-- **Splunk AI Assistant (SAIA)** — les outils `generate_spl` / `explain_spl` / `ask_splunk_question` du serveur MCP restent disponibles pour l'analyste.
+- **Splunk MCP Server** (official, Splunkbase app 7931) — the agent's control plane, exposes the tools on `/services/mcp`.
+- **Custom MCP tools** — 5 purpose-built forensic tools registered via `/services/mcp_tools`, which translate investigation intents into safe SPL.
+- **Splunk AI Toolkit** (Splunkbase app 2890) — the SPL command **`| ai`** has an LLM analyze the detections **directly inside the Splunk engine** (`forensics_ai_triage` tool). AI becomes part of the search language.
+- **Agentic Splunk SDK** (`splunklib.ai`, official Python SDK 3.0) — a native Splunk agent that **auto-discovers the MCP Server tools** and reasons with Claude, with RBAC enforced. See [splunk_app/find_evil/bin/](splunk_app/find_evil/bin/).
+- **Splunk AI Assistant (SAIA)** — the MCP server's `generate_spl` / `explain_spl` / `ask_splunk_question` tools remain available to the analyst.
 
-### L'agent officiel Splunk (`splunklib.ai`)
-- [splunk_app/find_evil/bin/forensic_agent_sdk.py](splunk_app/find_evil/bin/forensic_agent_sdk.py) — l'**Agentic Splunk SDK** + Claude, **auto-découverte des outils MCP**, RBAC respecté. Sortie : verdict + kill-chain MITRE.
-- [splunk_app/find_evil/bin/a2ui_agent.py](splunk_app/find_evil/bin/a2ui_agent.py) — le même agent en **sortie structurée**, convertie au format **A2UI v0.9** (https://a2ui.org : data model + bindings + templates), rendue en composants `@splunk/react-ui` natifs (vue *A2UI Native*).
+### The official Splunk agent (`splunklib.ai`)
+- [splunk_app/find_evil/bin/forensic_agent_sdk.py](splunk_app/find_evil/bin/forensic_agent_sdk.py) — the **Agentic Splunk SDK** + Claude, **auto-discovery of MCP tools**, RBAC enforced. Output: verdict + MITRE kill-chain.
+- [splunk_app/find_evil/bin/a2ui_agent.py](splunk_app/find_evil/bin/a2ui_agent.py) — the same agent with **structured output**, converted to the **A2UI v0.9** format (https://a2ui.org: data model + bindings + templates), rendered as native `@splunk/react-ui` components (*A2UI Native* view).
 
-## Les 5 outils forensiques (le différenciateur MCP)
+## The 5 forensic tools (the MCP differentiator)
 
-| Outil | Question à laquelle il répond |
+| Tool | Question it answers |
 |---|---|
-| `forensics_find_attack_techniques` | Quelles techniques d'attaque ont été détectées, par sévérité ? |
-| `forensics_triage_summary` | Quelle est l'ampleur de la compromission (par MITRE) ? |
-| `forensics_investigate_process` | Où est ce processus suspect (PID/PPID/session) ? |
-| `forensics_attack_timeline` | Dans quel ordre l'attaque s'est-elle déroulée ? |
-| `forensics_ai_triage` | **Verdict + kill-chain + remédiation** — analyse IA via `\| ai` (AI Toolkit → Claude) dans Splunk |
+| `forensics_find_attack_techniques` | Which attack techniques were detected, by severity? |
+| `forensics_triage_summary` | What is the scope of the compromise (by MITRE)? |
+| `forensics_investigate_process` | Where is this suspicious process (PID/PPID/session)? |
+| `forensics_attack_timeline` | In what order did the attack unfold? |
+| `forensics_ai_triage` | **Verdict + kill-chain + remediation** — AI analysis via `\| ai` (AI Toolkit → Claude) inside Splunk |
 
-### `forensics_ai_triage` — l'IA dans le SPL
+### `forensics_ai_triage` — AI inside SPL
 
-Cet outil exécute un SPL qui agrège les détections puis les passe au LLM via la commande
-`\| ai` du Splunk AI Toolkit :
+This tool runs an SPL search that aggregates the detections and then passes them to the LLM via the
+`\| ai` command of the Splunk AI Toolkit:
 
 ```spl
 search index=forensics sourcetype=forensics:yara_hit
 | eval line=severity.": ".rule." (".mitre.")"
 | stats list(line) as dets | eval detections=mvjoin(dets, " | ")
-| ai connection="claude" prompt="Analyste forensique: {detections}. Verdict + kill-chain MITRE + remédiation."
+| ai connection="claude" prompt="Forensic analyst: {detections}. Verdict + MITRE kill-chain + remediation."
 ```
 
-Le raisonnement IA est ainsi **natif au moteur Splunk**, et exposé à l'agent via le MCP Server.
+The AI reasoning is thus **native to the Splunk engine**, and exposed to the agent via the MCP Server.
 
 ## Installation
 
-### Prérequis
-- Splunk Enterprise 9.x/10.x en local (essai gratuit 60 j)
-- App **Splunk MCP Server** (Splunkbase 7931) installée
+### Prerequisites
+- Splunk Enterprise 9.x/10.x locally (free 60-day trial)
+- **Splunk MCP Server** app (Splunkbase 7931) installed
 - Python 3.11+, `brew install yara-x`
 
-### Étapes
+### Steps
 ```bash
-# 1. Environnement Python
+# 1. Python environment
 python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 
-# 2. Setup Splunk (index + HEC + tools MCP) — voir setup.sh pour le détail
+# 2. Splunk setup (index + HEC + MCP tools) — see setup.sh for details
 ./setup.sh
 
-# 3. Extraction des artefacts depuis l'image mémoire
-.venv/bin/python yara_scan.py        # scan YARA-X
-python vol_extract.py                     # extraction Volatility3
+# 3. Extract artifacts from the memory image
+.venv/bin/python yara_scan.py        # YARA-X scan
+python vol_extract.py                     # Volatility3 extraction
 
-# 4. Ingestion dans Splunk
+# 4. Ingest into Splunk
 .venv/bin/python ingest_to_splunk.py
 
-# 5. Investigation par l'agent officiel Splunk (splunklib.ai)
-#    (SDK vendorisé dans l'app : pip install --target=splunk_app/find_evil/lib "splunk-sdk[ai,anthropic]")
+# 5. Investigation by the official Splunk agent (splunklib.ai)
+#    (SDK vendored in the app: pip install --target=splunk_app/find_evil/lib "splunk-sdk[ai,anthropic]")
 SPLUNK_HOME=/Applications/Splunk SPLUNK_PASSWORD=... \
-  python splunk_app/find_evil/bin/forensic_agent_sdk.py "Ce DC est-il compromis ?"
-# ou produire l'A2UI rendu dans Splunk :
+  python splunk_app/find_evil/bin/forensic_agent_sdk.py "Is this DC compromised?"
+# or produce the A2UI rendered in Splunk:
 SPLUNK_HOME=/Applications/Splunk SPLUNK_PASSWORD=... \
   python splunk_app/find_evil/bin/a2ui_agent.py
 ```
 
-### Connexion d'un client MCP (Claude Desktop / Code)
-`.mcp.json` (gitignoré — contient le bearer token) :
+### Connecting an MCP client (Claude Desktop / Code)
+`.mcp.json` (gitignored — contains the bearer token):
 ```json
 {
   "mcpServers": {
@@ -145,15 +145,15 @@ SPLUNK_HOME=/Applications/Splunk SPLUNK_PASSWORD=... \
   }
 }
 ```
-> Le token est un token d'autorisation Splunk standard avec **`audience=mcp`** (exigence du serveur).
+> The token is a standard Splunk authorization token with **`audience=mcp`** (a server requirement).
 
-## Exemple de sortie
+## Example output
 
 ```
-## Verdict : COMPROMIS
-4 détection(s) critique(s), 7 élevée(s) sur le contrôleur de domaine.
+## Verdict: COMPROMISED
+4 critical detection(s), 7 high on the domain controller.
 
-| Sévérité | Règle | MITRE |
+| Severity | Rule | MITRE |
 |----------|-------|-------|
 | critical | NTDS_Extraction_ntdsutil      | T1003.003 |
 | critical | Credential_Dumping_Framework  | T1003.001 |
@@ -164,57 +164,57 @@ SPLUNK_HOME=/Applications/Splunk SPLUNK_PASSWORD=... \
 
 ## Dashboard
 
-**Forensic Command Center** (`forensics_ingest` app) : verdict, détections critiques, triage par sévérité, LOLBins en mémoire, chronologie, table MITRE.
+**Forensic Command Center** (`forensics_ingest` app): verdict, critical detections, triage by severity, in-memory LOLBins, timeline, MITRE table.
 `http://localhost:8000/en-US/app/forensics_ingest/forensic_command_center`
 
-## Workflow SOC automatisé (Détecter → Investiguer → Automatiser)
+## Automated SOC workflow (Detect → Investigate → Automate)
 
-Le cœur « piste Sécurité » : une **alerte Splunk planifiée** (`Find Evil - Auto Triage
-Workflow`, toutes les 30 min) qui automatise la boucle SOC complète, sans intervention :
+The heart of the "Security track": a **scheduled Splunk alert** (`Find Evil - Auto Triage
+Workflow`, every 30 min) that automates the full SOC loop, with no intervention:
 
-1. **Détecter** — recherche les détections YARA **critiques** dans l'index `forensics`.
-2. **Investiguer** — déclenche le triage IA via la commande **`| ai`** (AI Toolkit →
-   Claude) : verdict + kill-chain MITRE + actions de remédiation.
-3. **Automatiser** — écrit un **incident notable** (`sourcetype=forensics:incident`)
-   via `| collect`, visible dans le dashboard **SOC Incidents**.
+1. **Detect** — searches for **critical** YARA detections in the `forensics` index.
+2. **Investigate** — triggers AI triage via the **`| ai`** command (AI Toolkit →
+   Claude): verdict + MITRE kill-chain + remediation actions.
+3. **Automate** — writes a **notable incident** (`sourcetype=forensics:incident`)
+   via `| collect`, visible in the **SOC Incidents** dashboard.
 
 ```spl
 index=forensics sourcetype=forensics:yara_hit
 | stats list(...) as dets sum(eval(if(severity="critical",1,0))) as critical_count ...
-| ai connection="claude" prompt="Analyste SOC: {detections}. Verdict + kill-chain MITRE + remédiation."
+| ai connection="claude" prompt="SOC analyst: {detections}. Verdict + MITRE kill-chain + remediation."
 | where critical_count > 0
 | collect index=forensics sourcetype=forensics:incident
 ```
 
-Définition : [splunk_app/find_evil/default/savedsearches.conf](splunk_app/find_evil/default/savedsearches.conf).
-> La saved search doit appartenir à un utilisateur ayant la capacité AI Toolkit
-> (`apply_ai_commander_command`, via le rôle `mltk_admin`) pour que `| ai` s'exécute
-> dans le contexte planifié.
+Definition: [splunk_app/find_evil/default/savedsearches.conf](splunk_app/find_evil/default/savedsearches.conf).
+> The saved search must belong to a user who has the AI Toolkit capability
+> (`apply_ai_commander_command`, via the `mltk_admin` role) for `| ai` to run
+> in the scheduled context.
 
 ## Architecture
 
-Voir [ARCHITECTURE.md](ARCHITECTURE.md) pour le diagramme complet (interaction Splunk,
-intégration des agents/modèles IA, flux de données entre services).
+See [ARCHITECTURE.md](ARCHITECTURE.md) for the full diagram (Splunk interaction,
+AI agent/model integration, data flow between services).
 
-## Sécurité & bonnes pratiques (posture dev vs prod)
+## Security & best practices (dev vs prod posture)
 
-Aligné sur la doc Splunk (MCP Server + AI Toolkit). Conforme :
-- **RBAC respecté** — `mcp_tool_execute` accordé par rôle ; toutes les interactions IA
-  passent par le RBAC Splunk existant.
-- **Safe-SPL** — les 5 outils n'utilisent que des commandes whitelistées ; templates
-  SPL **figés**, paramètres validés par schéma `pattern` (pas de SPL arbitraire).
-- **Contrôle au niveau serveur** — outils sensibles par défaut exclus ; nos outils
-  activés explicitement.
-- **Discrétion des données** — seules des **métadonnées de détection** (règle/sévérité/
-  MITRE) sont envoyées au LLM, jamais de mémoire brute ni de PII.
-- **Secrets** — `.mcp_token`, `.hec_token`, `.anthropic_key`, `.mcp.json` en chmod 600,
-  gitignorés ; aucun secret en dur dans le code.
+Aligned with the Splunk documentation (MCP Server + AI Toolkit). Compliant:
+- **RBAC enforced** — `mcp_tool_execute` granted by role; all AI interactions
+  go through the existing Splunk RBAC.
+- **Safe-SPL** — the 5 tools use only whitelisted commands; **frozen** SPL
+  templates, parameters validated by `pattern` schema (no arbitrary SPL).
+- **Server-level control** — sensitive tools excluded by default; our tools
+  explicitly enabled.
+- **Data discretion** — only **detection metadata** (rule/severity/
+  MITRE) is sent to the LLM, never raw memory or PII.
+- **Secrets** — `.mcp_token`, `.hec_token`, `.anthropic_key`, `.mcp.json` at chmod 600,
+  gitignored; no hardcoded secrets in the code.
 
-Écarts assumés (local/démo — à durcir en production) :
-- Token MCP **Splunk standard `aud=mcp`** (vs token RSA-chiffré recommandé en prod).
-- Certificat **auto-signé** + TLS client désactivé sur localhost (vs vrai certificat).
-- `enable_risky_command_check_dashboard=false` pour afficher `| ai` (vs garde-fou activé).
+Accepted trade-offs (local/demo — to be hardened in production):
+- Standard Splunk MCP token **`aud=mcp`** (vs the RSA-encrypted token recommended in prod).
+- **Self-signed** certificate + client TLS disabled on localhost (vs a real certificate).
+- `enable_risky_command_check_dashboard=false` to display `| ai` (vs the guardrail enabled).
 
-## Licence
+## License
 
-MIT — voir [LICENSE](LICENSE).
+MIT — see [LICENSE](LICENSE).

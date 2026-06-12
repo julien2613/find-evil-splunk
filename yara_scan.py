@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Scan YARA-X de l'image mémoire — sortie JSON pour ingestion Splunk."""
+"""YARA-X scan of the memory image — JSON output for Splunk ingestion."""
 import json
 import mmap
 import sys
@@ -57,7 +57,7 @@ def main():
         "matching_rules": len(hits),
         "hits": hits,
     }, indent=2))
-    print(f"Scan terminé en {elapsed:.0f}s — {len(hits)} règles matchées → {OUT}")
+    print(f"Scan complete in {elapsed:.0f}s — {len(hits)} rules matched → {OUT}")
 
 if __name__ == "__main__":
     sys.exit(main())

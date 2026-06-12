@@ -1,5 +1,5 @@
-// Bundle le renderer A2UI React (+ @splunk/react-ui) en IIFE autonome
-// pour chargement par un dashboard Splunk (attribut script=).
+// Bundle the A2UI React renderer (+ @splunk/react-ui) as a standalone IIFE
+// to be loaded by a Splunk dashboard (script= attribute).
 import { build } from 'esbuild';
 import { fileURLToPath } from 'url';
 import { dirname, resolve } from 'path';
@@ -22,13 +22,13 @@ await build({
     loader: { '.js': 'jsx', '.jsx': 'jsx' },
     jsx: 'automatic',
     define: { 'process.env.NODE_ENV': '"production"' },
-    // Splunk charge ce bundle via RequireJS. On masque `define`/`module`/`exports`
-    // dans le scope du bundle pour que les dépendances UMD (React, styled-components)
-    // prennent la branche "global" et n'enregistrent PAS de define() AMD anonyme
-    // (sinon "Mismatched anonymous define()" + bandeau d'erreur du dashboard).
+    // Splunk loads this bundle via RequireJS. We shadow `define`/`module`/`exports`
+    // inside the bundle scope so UMD dependencies (React, styled-components) take the
+    // "global" branch and do NOT register an anonymous AMD define()
+    // (otherwise "Mismatched anonymous define()" + dashboard error toast).
     banner: { js: '(function(){var define=void 0,module=void 0,exports=void 0;' },
     footer: { js: '})();' },
     logLevel: 'info',
 });
 
-console.log('Bundle écrit:', OUT);
+console.log('Bundle written:', OUT);

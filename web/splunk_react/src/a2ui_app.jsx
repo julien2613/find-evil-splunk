@@ -1,14 +1,14 @@
 /**
- * Renderer A2UI → composants natifs Splunk (@splunk/react-ui).
+ * A2UI → native Splunk controls (@splunk/react-ui) renderer.
  *
- * L'agent officiel splunklib.ai émet un document A2UI (https://a2ui.org) avec un
- * catalogue de composants ENRICHI, orienté information : VerdictBadge, KpiRow,
- * SeverityBar, TechniqueTable (chips de sévérité), RecommendationList, IncidentList,
- * LolbinBars, Collapsible. Ce module mappe chaque composant A2UI vers un contrôle
- * @splunk/react-ui dense, plutôt que de déverser du Markdown verbeux.
+ * The official splunklib.ai agent emits an A2UI document (https://a2ui.org) using an
+ * ENRICHED component catalog focused on information density: VerdictBadge, KpiRow,
+ * SeverityBar, TechniqueTable (severity chips), RecommendationList, IncidentList,
+ * LolbinBars, Collapsible. This module maps each A2UI component to a dense
+ * @splunk/react-ui control instead of dumping verbose Markdown.
  *
- * Montage : tout <div data-a2ui-src="/static/app/find_evil/<surface>.a2ui.json">
- * présent dans un dashboard SimpleXML est rendu avec le snapshot indiqué.
+ * Mounting: every <div data-a2ui-src="/static/app/find_evil/<surface>.a2ui.json">
+ * present in a SimpleXML dashboard is rendered with the referenced snapshot.
  */
 import React, { useEffect, useState } from 'react';
 import ReactDOM from 'react-dom';
@@ -19,31 +19,31 @@ import Paragraph from '@splunk/react-ui/Paragraph';
 import Markdown from '@splunk/react-ui/Markdown';
 import Table from '@splunk/react-ui/Table';
 
-// --- Référentiel de sévérité (couleurs + libellés FR) ---
+// --- Severity reference (colors + labels) ---
 const SEV = {
-    critical: { label: 'Critique', color: '#d41f1f', bg: '#fde7e7', fg: '#a01313' },
-    high: { label: 'Élevée', color: '#f79009', bg: '#fff3e0', fg: '#9a5b00' },
-    medium: { label: 'Moyenne', color: '#eab308', bg: '#fef9e7', fg: '#7a5c00' },
-    low: { label: 'Faible', color: '#12b76a', bg: '#e7f7ee', fg: '#0a6b3d' },
+    critical: { label: 'Critical', color: '#d41f1f', bg: '#fde7e7', fg: '#a01313' },
+    high: { label: 'High', color: '#f79009', bg: '#fff3e0', fg: '#9a5b00' },
+    medium: { label: 'Medium', color: '#eab308', bg: '#fef9e7', fg: '#7a5c00' },
+    low: { label: 'Low', color: '#12b76a', bg: '#e7f7ee', fg: '#0a6b3d' },
     informational: { label: 'Info', color: '#2e90fa', bg: '#e8f2ff', fg: '#0b4a9a' },
     unknown: { label: '—', color: '#98a2b3', bg: '#eef1f6', fg: '#475467' },
 };
 const sevOf = (s) => SEV[String(s || '').toLowerCase()] || SEV.unknown;
 
 const VERDICT_TONE = {
-    COMPROMIS: { color: '#d41f1f', bg: '#fde7e7', fg: '#a01313', icon: '🔴' },
-    SUSPECT: { color: '#f79009', bg: '#fff3e0', fg: '#9a5b00', icon: '🟠' },
-    RAS: { color: '#12b76a', bg: '#e7f7ee', fg: '#0a6b3d', icon: '🟢' },
+    COMPROMISED: { color: '#d41f1f', bg: '#fde7e7', fg: '#a01313', icon: '🔴' },
+    SUSPICIOUS: { color: '#f79009', bg: '#fff3e0', fg: '#9a5b00', icon: '🟠' },
+    CLEAN: { color: '#12b76a', bg: '#e7f7ee', fg: '#0a6b3d', icon: '🟢' },
 };
 const verdictTone = (v) => {
     const k = String(v || '').toUpperCase();
-    if (k.includes('COMPROMIS')) return VERDICT_TONE.COMPROMIS;
-    if (k.includes('SUSPECT')) return VERDICT_TONE.SUSPECT;
-    if (k.includes('RAS')) return VERDICT_TONE.RAS;
-    return VERDICT_TONE.SUSPECT;
+    if (k.includes('COMPROMIS')) return VERDICT_TONE.COMPROMISED;
+    if (k.includes('SUSPIC') || k.includes('SUSPECT')) return VERDICT_TONE.SUSPICIOUS;
+    if (k.includes('CLEAN') || k.includes('RAS')) return VERDICT_TONE.CLEAN;
+    return VERDICT_TONE.SUSPICIOUS;
 };
 
-// --- Résolution JSON Pointer (RFC 6901) dans le scope de données courant ---
+// --- JSON Pointer resolution (RFC 6901) in the current data scope ---
 function resolvePath(ctx, pointer) {
     if (!pointer || pointer === '/') return ctx;
     let cur = ctx;
@@ -53,7 +53,7 @@ function resolvePath(ctx, pointer) {
     });
     return cur;
 }
-// DynamicString : littéral ou data binding {path}
+// DynamicString: literal or data binding {path}
 function dyn(ctx, val) {
     if (val && typeof val === 'object' && 'path' in val) {
         const v = resolvePath(ctx, val.path);
@@ -61,13 +61,13 @@ function dyn(ctx, val) {
     }
     return val == null ? '' : val;
 }
-// Récupère un tableau lié par la prop `path` du composant
+// Resolve an array bound via the component's `path` prop
 function boundArray(ctx, c) {
     const v = c.path ? resolvePath(ctx, c.path) : c.items;
     return Array.isArray(v) ? v : [];
 }
 
-// ============ Contrôles custom (@splunk/react-ui) ============
+// ============ Custom controls (@splunk/react-ui) ============
 
 function SevChip({ sev }) {
     const s = sevOf(sev);
@@ -87,7 +87,7 @@ function VerdictBadge({ verdict, summary }) {
             <div style={{ fontSize: 26 }}>{t.icon}</div>
             <div>
                 <div style={{ fontSize: 22, fontWeight: 800, color: t.fg, lineHeight: 1.1 }}>
-                    Verdict : {String(verdict).replace(/^Verdict\s*:\s*/i, '')}
+                    Verdict: {String(verdict).replace(/^Verdict\s*:\s*/i, '')}
                 </div>
                 {summary ? <div style={{ fontSize: 13, color: '#475467', marginTop: 4 }}>{summary}</div> : null}
             </div>
@@ -125,7 +125,7 @@ function SeverityBar({ data }) {
                     const s = sevOf(d.sev);
                     const w = (Number(d.count) || 0) / total * 100;
                     return w > 0 ? (
-                        <div key={i} title={`${s.label} : ${d.count}`} style={{ width: `${w}%`,
+                        <div key={i} title={`${s.label}: ${d.count}`} style={{ width: `${w}%`,
                             background: s.color, display: 'flex', alignItems: 'center',
                             justifyContent: 'center', color: '#fff', fontSize: 11, fontWeight: 700 }}>
                             {w > 8 ? d.count : ''}
@@ -154,7 +154,7 @@ function TechniqueTable({ rows }) {
     return (
         <Table stripeRows>
             <Table.Head>
-                <Table.HeadCell>Sévérité</Table.HeadCell>
+                <Table.HeadCell>Severity</Table.HeadCell>
                 <Table.HeadCell>Signature</Table.HeadCell>
                 <Table.HeadCell>MITRE ATT&CK</Table.HeadCell>
                 <Table.HeadCell>Description</Table.HeadCell>
@@ -220,7 +220,7 @@ function Collapsible({ title, text, open }) {
         <details open={!!open} style={{ background: '#fff', border: '1px solid #e4e8f0',
             borderRadius: 10, padding: '8px 14px' }}>
             <summary style={{ cursor: 'pointer', fontWeight: 700, color: '#0b1f3a', fontSize: 14,
-                listStyle: 'revert' }}>{title || 'Détails'}</summary>
+                listStyle: 'revert' }}>{title || 'Details'}</summary>
             <div style={{ marginTop: 8, fontSize: 13, color: '#1d2939' }}>
                 <Markdown text={String(text || '')} />
             </div>
@@ -243,14 +243,14 @@ function IncidentList({ items }) {
                                 <span style={{ fontSize: 12, color: '#667085' }}>{inc.time}</span>
                                 <span style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
                                     <span style={{ fontSize: 12, color: '#a01313', fontWeight: 700 }}>
-                                        {inc.critical} critiques</span>
+                                        {inc.critical} critical</span>
                                     <span style={{ fontSize: 12, color: '#9a5b00', fontWeight: 700 }}>
-                                        {inc.high} élevées</span>
+                                        {inc.high} high</span>
                                 </span>
                             </div>
                             {inc.analysis ? (
                                 <div style={{ marginTop: 10 }}>
-                                    <Collapsible title="Analyse IA du triage" text={inc.analysis} />
+                                    <Collapsible title="AI triage analysis" text={inc.analysis} />
                                 </div>
                             ) : null}
                         </Card.Body>
@@ -261,7 +261,7 @@ function IncidentList({ items }) {
     );
 }
 
-// ============ Dispatch A2UI -> contrôle ============
+// ============ A2UI -> control dispatch ============
 
 function childNodes(children, map, ctx, key) {
     if (Array.isArray(children)) return children.map((cid) => renderNode(cid, map, ctx, key + ':' + cid));
@@ -280,7 +280,7 @@ function renderNode(id, map, ctx, key) {
     const block = (el) => <div key={k} style={{ marginBottom: 4 }}>{el}</div>;
 
     switch (t) {
-        // --- Catalogue enrichi (contrôles info-denses) ---
+        // --- Enriched catalog (information-dense controls) ---
         case 'VerdictBadge':
             return block(<VerdictBadge verdict={dyn(ctx, c.verdict)} summary={dyn(ctx, c.summary)} />);
         case 'KpiRow':
@@ -298,7 +298,7 @@ function renderNode(id, map, ctx, key) {
         case 'Collapsible':
             return block(<Collapsible title={dyn(ctx, c.title)} text={dyn(ctx, c.text)} open={c.open} />);
 
-        // --- Catalogue A2UI standard (fallback conforme v0.9) ---
+        // --- Standard A2UI catalog (v0.9-conformant fallback) ---
         case 'Column':
             return <div key={k} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                 {childNodes(c.children, map, ctx, k)}</div>;
@@ -324,7 +324,7 @@ function renderNode(id, map, ctx, key) {
     }
 }
 
-// ============ Parsing A2UI JSONL ============
+// ============ A2UI JSONL parsing ============
 
 function parseA2UI(text) {
     const map = {};
@@ -355,7 +355,7 @@ function parseA2UI(text) {
     return { map, root, dataModel };
 }
 
-// ============ App + montage ============
+// ============ App + mounting ============
 
 function App({ src }) {
     const [s, setS] = useState({ status: 'loading' });
@@ -369,16 +369,16 @@ function App({ src }) {
     return (
         <SplunkThemeProvider family="prisma" colorScheme="light" density="comfortable">
             <div style={{ padding: 8 }}>
-                {s.status === 'loading' && <Paragraph>Chargement du rapport A2UI…</Paragraph>}
+                {s.status === 'loading' && <Paragraph>Loading A2UI report…</Paragraph>}
                 {s.status === 'error' && (
-                    <Paragraph>⚠ A2UI introuvable ({src}) : {s.error}. Génère le snapshot
-                        (bin/gen_a2ui.py) ou lance l'agent (bin/a2ui_agent.py).</Paragraph>
+                    <Paragraph>⚠ A2UI snapshot not found ({src}): {s.error}. Generate it
+                        (bin/gen_a2ui.py) or run the agent (bin/a2ui_agent.py).</Paragraph>
                 )}
                 {s.status === 'ok' && (
                     <div>
                         {s.root && renderNode(s.root, s.map, s.dataModel, s.root)}
                         <Paragraph style={{ color: '#98a2b3', fontSize: 11, marginTop: 12 }}>
-                            Rendu via {s.count} composants A2UI → contrôles @splunk/react-ui (protocole Agent-to-UI v0.9).
+                            Rendered from {s.count} A2UI components → @splunk/react-ui controls (Agent-to-UI protocol v0.9).
                         </Paragraph>
                     </div>
                 )}

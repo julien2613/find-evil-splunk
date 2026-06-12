@@ -1,13 +1,14 @@
-"""Intégration A2UI × Agentic Splunk SDK.
+"""A2UI × Agentic Splunk SDK integration.
 
-L'agent officiel `splunklib.ai` investigue l'image mémoire via les outils du Splunk
-MCP Server, puis **structure son verdict** (output_schema pydantic). On convertit cette
-sortie structurée au format **A2UI** (https://a2ui.org) et on l'écrit dans le static de
-l'app, où la vue React native (a2ui_native) la rend en composants @splunk/react-ui.
+The official `splunklib.ai` agent investigates the memory image through the Splunk
+MCP Server tools, then **structures its verdict** (pydantic output_schema). We convert
+that structured output to the **A2UI** format (https://a2ui.org) and write it to the
+app static dir, where the native React view (a2ui_native) renders it as
+@splunk/react-ui controls.
 
-Pipeline : Agent SDK (tools MCP) -> structured_output -> A2UI JSONL -> render React Splunk.
+Pipeline: Agent SDK (MCP tools) -> structured_output -> A2UI JSONL -> Splunk React render.
 
-Lancement :
+Run:
     SPLUNK_HOME=/Applications/Splunk SPLUNK_PASSWORD=... \
       python /Applications/Splunk/etc/apps/find_evil/bin/a2ui_agent.py
 """
@@ -35,33 +36,33 @@ REPO = Path("/Users/julientaste/testsplunk")
 STATIC = Path("/Applications/Splunk/etc/apps/find_evil/appserver/static/forensic_report.a2ui.json")
 VERSION, SURFACE = "v0.9", "forensic"
 
-# Outils sans paramètre row_limit (Anthropic strict refuse les contraintes min/max
-# sur les entiers que le row_limiter du MCP Server injecterait).
+# Tools without a row_limit parameter (Anthropic strict mode rejects the integer
+# min/max constraints that the MCP Server row_limiter would inject).
 FORENSIC_TOOLS = [
-    "forensics_find_attack_techniques", "forensics_triage_summary", "forensics_ai_triage",
+    "forensics_find_attack_techniques", "forensics_triage_summary",
 ]
 
 
-# --- Schéma de sortie structurée de l'agent ---
+# --- Agent structured output schema ---
 class Technique(BaseModel):
-    signature: str = Field(description="Nom de la signature YARA détectée (CIM)")
+    signature: str = Field(description="Detected YARA signature name (CIM)")
     severity: Literal["critical", "high", "medium", "low", "informational"]
-    mitre: str = Field(description="Identifiant(s) MITRE ATT&CK, ex. T1003.003")
-    description: str = Field(description="Description courte de la technique")
+    mitre: str = Field(description="MITRE ATT&CK identifier(s), e.g. T1003.003")
+    description: str = Field(description="Short description of the technique")
 
 
 class ForensicReport(BaseModel):
-    verdict: Literal["COMPROMIS", "SUSPECT", "RAS"]
-    techniques: List[Technique] = Field(description="Techniques d'attaque détectées, triées par sévérité")
-    analysis: str = Field(description="Synthèse d'analyste en Markdown : kill-chain et raisonnement")
-    recommendations: List[str] = Field(description="3 à 5 actions de remédiation prioritaires")
+    verdict: Literal["COMPROMISED", "SUSPICIOUS", "CLEAN"]
+    techniques: List[Technique] = Field(description="Detected attack techniques, sorted by severity")
+    analysis: str = Field(description="Analyst summary in Markdown: kill-chain and reasoning")
+    recommendations: List[str] = Field(description="3 to 5 prioritized remediation actions")
 
 
-SYSTEM_PROMPT = """Tu es un analyste forensique senior. Tu DOIS d'abord appeler tes outils
-(au minimum forensics_find_attack_techniques ET forensics_triage_summary) pour collecter les
-détections — n'émets JAMAIS de conclusion avant d'avoir les résultats des outils. Ensuite,
-renvoie un rapport structuré : verdict, techniques MITRE (toutes celles renvoyées par l'outil),
-analyse Markdown, recommandations. Appuie-toi UNIQUEMENT sur les résultats des outils."""
+SYSTEM_PROMPT = """You are a senior forensic analyst. You MUST first call your tools
+(at least forensics_find_attack_techniques AND forensics_triage_summary) to collect the
+detections — NEVER emit a conclusion before you have the tool results. Then return a
+structured report: verdict, MITRE techniques (all of those returned by the tool), Markdown
+analysis, and recommendations. Base everything ONLY on the tool results. Write in English."""
 
 
 def _secret(env, fname):
@@ -76,16 +77,16 @@ SEV_RANK = {"critical": 0, "high": 1, "medium": 2, "low": 3, "informational": 4}
 
 
 def to_a2ui(report: ForensicReport) -> str:
-    """Convertit la sortie structurée de l'agent en A2UI enrichi (catalogue partagé
-    a2ui_catalog) : le renderer mappe vers des contrôles @splunk/react-ui denses
-    (VerdictBadge, KpiRow, SeverityBar, TechniqueTable, RecommendationList)."""
+    """Convert the agent's structured output to enriched A2UI (shared a2ui_catalog):
+    the renderer maps it to dense @splunk/react-ui controls (VerdictBadge, KpiRow,
+    SeverityBar, TechniqueTable, RecommendationList)."""
     techs = [{"signature": t.signature, "severity": t.severity, "mitre": t.mitre,
               "description": t.description}
              for t in sorted(report.techniques, key=lambda t: SEV_RANK.get(t.severity, 5))]
     crit = sum(1 for t in techs if t["severity"] == "critical")
     high = sum(1 for t in techs if t["severity"] == "high")
-    summary = (f"{crit} détections critiques, {high} élevées — {len(techs)} techniques MITRE "
-               f"reconstituant la kill-chain sur le contrôleur de domaine.")
+    summary = (f"{crit} critical detections, {high} high — {len(techs)} MITRE techniques "
+               f"reconstructing the kill-chain on the domain controller.")
     return cat.build_forensic(SURFACE, verdict=report.verdict, summary=summary,
                               analysis=report.analysis, techniques=techs,
                               recommendations=list(report.recommendations))
@@ -95,7 +96,7 @@ async def main():
     anthropic_key = _secret("ANTHROPIC_API_KEY", ".anthropic_key")
     splunk_pass = _secret("SPLUNK_PASSWORD", ".splunk_pass")
     if not anthropic_key or not splunk_pass:
-        sys.exit("Manque ANTHROPIC_API_KEY ou SPLUNK_PASSWORD")
+        sys.exit("Missing ANTHROPIC_API_KEY or SPLUNK_PASSWORD")
 
     service = connect(scheme="https", host="localhost", port=8089,
                       username=os.environ.get("SPLUNK_USERNAME", "julien"),
@@ -109,17 +110,17 @@ async def main():
         tool_settings=ToolSettings(local=None,
             remote=RemoteToolSettings(allowlist=ToolAllowlist(names=FORENSIC_TOOLS))),
     ) as agent:
-        print("[A2UI × Splunk SDK] investigation en cours…")
+        print("[A2UI × Splunk SDK] investigation in progress…")
         result = await agent.invoke([HumanMessage(
-            content="Appelle d'abord forensics_find_attack_techniques et forensics_triage_summary, "
-                    "puis produis le rapport d'incident structuré à partir de leurs résultats.")])
+            content="First call forensics_find_attack_techniques and forensics_triage_summary, "
+                    "then produce the structured incident report from their results.")])
         report: ForensicReport = result.structured_output
         print(f"  verdict={report.verdict} | {len(report.techniques)} techniques | "
-              f"{len(report.recommendations)} recommandations")
+              f"{len(report.recommendations)} recommendations")
         a2ui = to_a2ui(report)
         STATIC.write_text(a2ui)
-        print(f"  A2UI écrit ({len(a2ui)} octets) -> {STATIC}")
-        print("  Rendu : http://localhost:8000/en-US/app/find_evil/a2ui_native")
+        print(f"  A2UI written ({len(a2ui)} bytes) -> {STATIC}")
+        print("  Render: http://localhost:8000/en-US/app/find_evil/a2ui_native")
 
 
 if __name__ == "__main__":

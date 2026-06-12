@@ -1,11 +1,11 @@
 <dashboard version="1.1" theme="light" stylesheet="find_evil.css" script="a2ui_react.js">
   <label>Forensic Command Center — Find Evil</label>
-  <description>Vue d'ensemble forensique du DC Windows Server 2016 compromis (SRL-2018) — verdict, KPIs, sévérité, kill-chain MITRE et LOLBins, rendus en contrôles natifs @splunk/react-ui via A2UI.</description>
+  <description>Forensic overview of the compromised Windows Server 2016 DC (SRL-2018) — verdict, KPIs, severity, MITRE kill-chain and LOLBins, rendered as native @splunk/react-ui controls via A2UI.</description>
   <row>
     <panel>
       <html>
         <div class="fe-banner">
-          <b>🔴 Forensic Command Center</b> — alimenté par YARA-X + Volatility3, interrogeable par agent via le <code>Splunk MCP Server</code>. Synthèse A2UI rendue en composants <code>@splunk/react-ui</code>.
+          <b>🔴 Forensic Command Center</b> — powered by YARA-X + Volatility3, agent-queryable through the <code>Splunk MCP Server</code>. A2UI summary rendered as <code>@splunk/react-ui</code> components.
         </div>
         <div data-a2ui-src="/static/app/find_evil/command.a2ui.json" style="min-height:640px;"></div>
       </html>

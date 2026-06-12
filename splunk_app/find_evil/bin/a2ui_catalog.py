@@ -1,11 +1,11 @@
-"""Catalogue A2UI enrichi (orienté information) — partagé par l'agent splunklib.ai
-(a2ui_agent.py) et le générateur déterministe (gen_a2ui.py).
+"""Enriched A2UI catalog (information-first) — shared by the splunklib.ai agent
+(a2ui_agent.py) and the deterministic generator (gen_a2ui.py).
 
-Chaque builder produit un document A2UI JSONL (createSurface + updateComponents +
-updateDataModel) consommé par le renderer React `a2ui_app.jsx`, qui mappe les
-composants vers des contrôles @splunk/react-ui denses :
-  VerdictBadge · KpiRow · SeverityBar · TechniqueTable · RecommendationList ·
-  LolbinBars · IncidentList · Collapsible.
+Each builder produces an A2UI JSONL document (createSurface + updateComponents +
+updateDataModel) consumed by the React renderer `a2ui_app.jsx`, which maps the
+components to dense @splunk/react-ui controls:
+  VerdictBadge · KpiRow · SeverityBar · TechniqueTable (severity chips) ·
+  RecommendationList · LolbinBars · IncidentList · Collapsible.
 """
 import json
 import re
@@ -25,10 +25,10 @@ def _doc(surface, comps, data):
     ])
 
 
-# --- Helpers de parsing (pour reconstruire des données structurées) ---
+# --- Parsing helpers (to rebuild structured data) ---
 
 def parse_tech_label(label):
-    """'**[CRITICAL]** Sig — `T1003` — desc' -> dict structuré."""
+    """'**[CRITICAL]** Sig — `T1003` — desc' -> structured dict."""
     m = re.match(r"\*\*\[(\w+)\]\*\*\s*(.+?)\s*—\s*`([^`]*)`\s*—\s*(.+)", label, re.S)
     if not m:
         return {"signature": label, "severity": "unknown", "mitre": "", "description": ""}
@@ -37,7 +37,7 @@ def parse_tech_label(label):
 
 
 def parse_reco(text):
-    """'1. **[PRIORITÉ 1 — Immédiat]** texte' -> {priority, horizon, text}."""
+    """'1. **[PRIORITY 1 — Immediate]** text' -> {priority, horizon, text}."""
     t = re.sub(r"^\s*(\d+)[\.\)]\s*", "", text)
     num = re.match(r"^\s*(\d+)", text)
     priority = f"P{num.group(1)}" if num else None
@@ -67,8 +67,8 @@ def build_forensic(surface, *, verdict, summary, analysis, techniques, recommend
     crit = sum(1 for t in techs if t["severity"] == "critical")
     high = sum(1 for t in techs if t["severity"] == "high")
     kpis = [
-        {"label": "Critiques", "value": crit, "tone": "critical"},
-        {"label": "Élevées", "value": high, "tone": "high"},
+        {"label": "Critical", "value": crit, "tone": "critical"},
+        {"label": "High", "value": high, "tone": "high"},
         {"label": "Techniques", "value": len(techs), "tone": "neutral"},
     ] + (extra_kpis or [])
     data = {
@@ -80,18 +80,18 @@ def build_forensic(surface, *, verdict, summary, analysis, techniques, recommend
         {"id": "root", "component": "Column", "children": [
             "title", "verdict", "kpis", "sev_h", "sev", "tech_h", "tech", "reco_h", "reco", "analysis"]},
         {"id": "title", "component": "Text", "variant": "h2",
-         "text": "Rapport d'incident — agent splunklib.ai → A2UI"},
+         "text": "Incident report — splunklib.ai agent → A2UI"},
         {"id": "verdict", "component": "VerdictBadge",
          "verdict": {"path": "/verdict"}, "summary": {"path": "/summary"}},
         {"id": "kpis", "component": "KpiRow", "path": "/kpis"},
-        {"id": "sev_h", "component": "Text", "variant": "h3", "text": "Répartition par sévérité"},
+        {"id": "sev_h", "component": "Text", "variant": "h3", "text": "Severity breakdown"},
         {"id": "sev", "component": "SeverityBar", "path": "/severity"},
-        {"id": "tech_h", "component": "Text", "variant": "h3", "text": "Kill-chain MITRE ATT&CK"},
+        {"id": "tech_h", "component": "Text", "variant": "h3", "text": "MITRE ATT&CK kill-chain"},
         {"id": "tech", "component": "TechniqueTable", "path": "/techniques"},
-        {"id": "reco_h", "component": "Text", "variant": "h3", "text": "Recommandations de remédiation"},
+        {"id": "reco_h", "component": "Text", "variant": "h3", "text": "Remediation recommendations"},
         {"id": "reco", "component": "RecommendationList", "path": "/recommendations"},
         {"id": "analysis", "component": "Collapsible",
-         "title": "Analyse détaillée de l'agent (kill-chain & raisonnement)", "text": {"path": "/analysis"}},
+         "title": "Detailed agent analysis (kill-chain & reasoning)", "text": {"path": "/analysis"}},
     ]
     return _doc(surface, comps, data)
 
@@ -103,15 +103,15 @@ def build_command(surface, *, verdict, summary, kpis, severity, techniques, lolb
         {"id": "root", "component": "Column", "children": [
             "title", "verdict", "kpis", "sev_h", "sev", "tech_h", "tech", "lol_h", "lol"]},
         {"id": "title", "component": "Text", "variant": "h2",
-         "text": "Forensic Command Center — DC compromis (SRL-2018)"},
+         "text": "Forensic Command Center — compromised DC (SRL-2018)"},
         {"id": "verdict", "component": "VerdictBadge",
          "verdict": {"path": "/verdict"}, "summary": {"path": "/summary"}},
         {"id": "kpis", "component": "KpiRow", "path": "/kpis"},
-        {"id": "sev_h", "component": "Text", "variant": "h3", "text": "Détections par sévérité"},
+        {"id": "sev_h", "component": "Text", "variant": "h3", "text": "Detections by severity"},
         {"id": "sev", "component": "SeverityBar", "path": "/severity"},
-        {"id": "tech_h", "component": "Text", "variant": "h3", "text": "Kill-chain MITRE ATT&CK détectée"},
+        {"id": "tech_h", "component": "Text", "variant": "h3", "text": "Detected MITRE ATT&CK kill-chain"},
         {"id": "tech", "component": "TechniqueTable", "path": "/techniques"},
-        {"id": "lol_h", "component": "Text", "variant": "h3", "text": "Outils d'attaque (LOLBins) en mémoire"},
+        {"id": "lol_h", "component": "Text", "variant": "h3", "text": "Attack tools (LOLBins) in memory"},
         {"id": "lol", "component": "LolbinBars", "path": "/lolbins"},
     ]
     return _doc(surface, comps, data)
@@ -122,7 +122,7 @@ def build_incidents(surface, *, incidents):
     comps = [
         {"id": "root", "component": "Column", "children": ["title", "list"]},
         {"id": "title", "component": "Text", "variant": "h2",
-         "text": "Incidents SOC — triage IA automatisé"},
+         "text": "SOC incidents — automated AI triage"},
         {"id": "list", "component": "IncidentList", "path": "/incidents"},
     ]
     return _doc(surface, comps, data)

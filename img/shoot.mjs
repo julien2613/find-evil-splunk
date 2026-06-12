@@ -1,4 +1,4 @@
-// Capture d'écran des dashboards de l'app find_evil (Splunk Web).
+// Screenshot capture of the find_evil app dashboards (Splunk Web).
 import { chromium } from "playwright";
 
 const USER = process.env.SPLUNK_USERNAME || "julien";
@@ -29,13 +29,13 @@ await Promise.all([
   page.click('input[type="submit"], button[type="submit"]'),
 ]);
 await sleep(3000);
-console.log("Connecté à Splunk.");
+console.log("Connected to Splunk.");
 
 // --- Captures ---
 for (const v of VIEWS) {
   try {
     await page.goto(v.url, { waitUntil: "domcontentloaded" });
-    await sleep(v.wait); // laisse les recherches / | ai / React A2UI se rendre
+    await sleep(v.wait); // let the searches / | ai / React A2UI render
     const file = `${OUT}/${v.name}.png`;
     await page.screenshot({ path: file, fullPage: true });
     console.log(`OK  ${v.name}.png`);
@@ -45,4 +45,4 @@ for (const v of VIEWS) {
 }
 
 await browser.close();
-console.log("Terminé.");
+console.log("Done.");

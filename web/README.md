@@ -1,11 +1,11 @@
-# web/splunk_react — Renderer A2UI (composants React natifs Splunk)
+# web/splunk_react — A2UI renderer (native Splunk React components)
 
-Source du bundle React qui rend la sortie **A2UI** de l'agent officiel Splunk
-(`splunklib.ai`) en composants `@splunk/react-ui`, dans la vue **A2UI Native** de l'app.
+Source of the React bundle that renders the **A2UI** output of the official Splunk agent
+(`splunklib.ai`) as `@splunk/react-ui` components, in the app's **A2UI Native** view.
 
-- Génération de l'A2UI : `splunk_app/find_evil/bin/a2ui_agent.py` (agent officiel) écrit
-  `appserver/static/forensic_report.a2ui.json` (A2UI v0.9 : data model + bindings + templates).
-- Rendu : `splunk_react/src/a2ui_app.jsx` → bundle `appserver/static/a2ui_react.js`.
+- A2UI generation: `splunk_app/find_evil/bin/a2ui_agent.py` (official agent) writes
+  `appserver/static/forensic_report.a2ui.json` (A2UI v0.9: data model + bindings + templates).
+- Rendering: `splunk_react/src/a2ui_app.jsx` → bundle `appserver/static/a2ui_react.js`.
 
 ## Build
 ```bash

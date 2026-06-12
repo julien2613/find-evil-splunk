@@ -1,43 +1,43 @@
-# Configuration du Splunk AI Toolkit (commande `| ai`)
+# Splunk AI Toolkit setup (`| ai` command)
 
-L'outil `forensics_ai_triage` s'appuie sur la commande SPL **`| ai`** du Splunk AI
-Toolkit. Sur **Splunk Enterprise local** (macOS Apple Silicon), la mise en route
-demande quatre étapes — toutes découvertes et validées sur cette machine.
+The `forensics_ai_triage` tool relies on the **`| ai`** SPL command of the Splunk AI
+Toolkit. On **local Splunk Enterprise** (macOS Apple Silicon), getting it running
+requires four steps — all discovered and validated on this machine.
 
-## 1. Installer le AI Toolkit
-- Splunkbase **app 2890** → `Splunk_ML_Toolkit` dans `etc/apps/`.
+## 1. Install the AI Toolkit
+- Splunkbase **app 2890** → `Splunk_ML_Toolkit` in `etc/apps/`.
 
-## 2. Installer le moteur Python (PSC) — variante exacte
-- Splunkbase **app 2882**, variante **macOS Apple Silicon (arm64)**.
-- Déballe sous `Splunk_SA_Scientific_Python_darwin_arm64` (le nom que `| ai` réclame).
-- ⚠️ **Linux/Intel ne fonctionnent pas** : binaires Python compilés par plateforme.
+## 2. Install the Python engine (PSC) — exact variant
+- Splunkbase **app 2882**, the **macOS Apple Silicon (arm64)** variant.
+- Unpacks under `Splunk_SA_Scientific_Python_darwin_arm64` (the name `| ai` requires).
+- ⚠️ **Linux/Intel do not work**: Python binaries are compiled per platform.
 
-### Retirer la quarantaine macOS (sinon SIGKILL)
-Le Python embarqué n'est pas signé → Gatekeeper le tue (`error code 9`). Fix :
+### Remove the macOS quarantine (otherwise SIGKILL)
+The embedded Python is unsigned → Gatekeeper kills it (`error code 9`). Fix:
 ```bash
 xattr -dr com.apple.quarantine \
   /Applications/Splunk/etc/apps/Splunk_SA_Scientific_Python_darwin_arm64
 ```
-Puis redémarrer Splunk.
+Then restart Splunk.
 
-## 3. Donner la capacité à l'utilisateur
-La commande `| ai` exige `apply_ai_commander_command`, absente du rôle `admin`.
-Ajouter le rôle **`mltk_admin`** à l'utilisateur (Settings → Users), ou accorder
-les capacités `apply_ai_commander_command` / `edit_ai_commander_config` /
-`list_ai_commander_config` au rôle voulu.
+## 3. Grant the capability to the user
+The `| ai` command requires `apply_ai_commander_command`, which is absent from the `admin` role.
+Add the **`mltk_admin`** role to the user (Settings → Users), or grant
+the `apply_ai_commander_command` / `edit_ai_commander_config` /
+`list_ai_commander_config` capabilities to the desired role.
 
-## 4. Créer la connexion LLM (UI)
-Dans **AI Toolkit → Connections** (`/app/Splunk_ML_Toolkit/connections`) :
-- Provider **Anthropic**, modèle `claude-sonnet-4-5-20250929`
-- Access Token = clé `sk-ant-…`, endpoint `https://api.anthropic.com/v1/messages`
-- Nommer la connexion **`claude`** (référencée par l'outil `forensics_ai_triage`).
+## 4. Create the LLM connection (UI)
+In **AI Toolkit → Connections** (`/app/Splunk_ML_Toolkit/connections`):
+- Provider **Anthropic**, model `claude-sonnet-4-5-20250929`
+- Access Token = `sk-ant-…` key, endpoint `https://api.anthropic.com/v1/messages`
+- Name the connection **`claude`** (referenced by the `forensics_ai_triage` tool).
 
-> La page Connections n'affiche les providers qu'une fois PSC installé **et** le
-> rôle accordé. Sans cela, seul « Custom » apparaît.
+> The Connections page only shows the providers once PSC is installed **and** the
+> role is granted. Without that, only "Custom" appears.
 
-## 5. Vérifier
+## 5. Verify
 ```spl
-| makeresults | ai connection="claude" prompt="dis bonjour"
+| makeresults | ai connection="claude" prompt="say hello"
 ```
-Doit retourner une réponse du modèle. Ensuite l'outil MCP `forensics_ai_triage`
-fonctionne (voir `../forensic_ai_tool.json`).
+Should return a response from the model. After that, the `forensics_ai_triage` MCP tool
+works (see `../forensic_ai_tool.json`).

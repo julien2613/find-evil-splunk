@@ -1,12 +1,12 @@
-splunk-sdk>=3.0.0    # SDK officiel : ingestion (index.attached_socket) + agent splunklib.ai
-# Pipeline d'extraction + ingestion forensique
-volatility3==2.28.0   # extraction processus depuis l'image mémoire
-yara-x==1.17.0        # bindings Python (le scan utilise aussi le CLI `yr`)
-polars==1.41.2        # DataFrames rapides (corrélation cross-artefact)
-duckdb==1.5.3         # requêtes SQL sur les artefacts
-pyarrow==24.0.0       # I/O Parquet
-requests==2.34.2      # HEC + client MCP JSON-RPC
+splunk-sdk>=3.0.0    # official SDK: ingestion (index.attached_socket) + splunklib.ai agent
+# Forensic extraction + ingestion pipeline
+volatility3==2.28.0   # process extraction from the memory image
+yara-x==1.17.0        # Python bindings (the scan also uses the `yr` CLI)
+polars==1.41.2        # fast DataFrames (cross-artifact correlation)
+duckdb==1.5.3         # SQL queries on the artifacts
+pyarrow==24.0.0       # Parquet I/O
+requests==2.34.2      # HEC + MCP JSON-RPC client
 
-# Prérequis système (hors pip) :
-#   brew install yara-x        -> fournit le binaire `yr` utilisé par yara_scan.py
-#   Splunk Enterprise 9.x/10.x -> instance locale (HEC + MCP Server)
+# System prerequisites (outside pip):
+#   brew install yara-x        -> provides the `yr` binary used by yara_scan.py
+#   Splunk Enterprise 9.x/10.x -> local instance (HEC + MCP Server)

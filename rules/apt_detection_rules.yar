@@ -18,7 +18,7 @@ rule NTDS_Extraction_ntdsutil {
         $ntds_dit = "ntds.dit" nocase
         $ac_ntds = "ac i ntds" nocase
     condition:
-        // Au moins 3 indicateurs + ntds.dit
+        // At least 3 indicators + ntds.dit
         $ntds_dit and 2 of ($ntdsutil, $ifm, $create_full, $ac_ntds)
 }
 
@@ -49,7 +49,7 @@ rule Shadow_Copy_Credential_Theft {
         $gmt_snapshot = /@GMT-\d{4}\.\d{2}\.\d{2}-\d{2}\.\d{2}\.\d{2}/
         $globalroot = "\\\\?\\GLOBALROOT\\Device\\HarddiskVolumeShadowCopy"
     condition:
-        // VSS + credential file = attaque confirmée
+        // VSS + credential file = confirmed attack
         (1 of ($vss*) and 1 of ($sam_path, $system_path))
         or $gmt_snapshot
         or $globalroot
@@ -70,7 +70,7 @@ rule Credential_Dumping_Framework {
         $hd2 = "Invoke-PassTheTicket" nocase
         $hd3 = "secretsdump" nocase
     condition:
-        2 of them  // Multiple indicateurs pour éviter false positives AV
+        2 of them  // Multiple indicators to avoid AV false positives
 }
 
 // --- EXECUTION / OBFUSCATION ---
@@ -93,7 +93,7 @@ rule PowerShell_Obfuscated_Execution {
         $nop = "-nop " nocase
         $noprofile = "-noprofile" nocase
     condition:
-        // Combinaison de 3+ flags d'obfuscation
+        // Combination of 3+ obfuscation flags
         3 of them
 }
 

@@ -1,23 +1,23 @@
 #!/usr/bin/env python3
-"""Ingestion forensique vers Splunk — via le SDK Python officiel (splunk-sdk-python).
+"""Forensic ingestion into Splunk — via the official Python SDK (splunk-sdk-python).
 
-Connexion au service Splunk puis index.attached_socket() pour streamer les événements
-JSON ; le parsing (champs + _time depuis event_time) est assuré par le TA versionné
+Connects to the Splunk service then uses index.attached_socket() to stream JSON
+events; parsing (fields + _time from event_time) is handled by the versioned TA
 `splunk_app/forensics_ingest` (props.conf).
 
-Sourcetypes produits (champs alignés CIM — Common Information Model)
+Sourcetypes produced (fields aligned with CIM — Common Information Model)
 -------------------------------------------------------------------
-forensics:process   — un processus (Volatility3 windows.psscan) — CIM Endpoint.Processes
+forensics:process   — a process (Volatility3 windows.psscan) — CIM Endpoint.Processes
     event_time, dest, process_name, process_id, parent_process_id, create_time,
     exit_time, threads, session_id, wow64, offset_v, image, host_role, os
-forensics:yara_hit  — une détection YARA (apt_detection_rules.yar) — CIM Alerts/IDS
+forensics:yara_hit  — a YARA detection (apt_detection_rules.yar) — CIM Alerts/IDS
     event_time, dest, signature, description, severity, mitre, image, host_role
 
-Config (CLI ou env) : --host/SPLUNK_HOST, --port/SPLUNK_PORT, --username/SPLUNK_USERNAME,
-SPLUNK_PASSWORD (ou .splunk_pass), --index, --image-name, --artifacts.
-Idempotence : --clean vide l'index avant d'ingérer (évite les doublons).
+Config (CLI or env): --host/SPLUNK_HOST, --port/SPLUNK_PORT, --username/SPLUNK_USERNAME,
+SPLUNK_PASSWORD (or .splunk_pass), --index, --image-name, --artifacts.
+Idempotence: --clean empties the index before ingesting (avoids duplicates).
 
-Prérequis : pip install splunk-sdk
+Prerequisites: pip install splunk-sdk
 """
 import argparse
 import json
@@ -34,9 +34,9 @@ from splunklib import client
 LOG = logging.getLogger("find_evil.ingest")
 
 BASE = Path(__file__).parent
-# Format aligné sur props.conf (TIME_FORMAT %Y-%m-%dT%H:%M:%S%z). strftime -> offset +0000.
+# Format aligned with props.conf (TIME_FORMAT %Y-%m-%dT%H:%M:%S%z). strftime -> offset +0000.
 TS_FMT = "%Y-%m-%dT%H:%M:%S%z"
-# Horodatage d'acquisition du dump (Windows Server 2016 DC, SRL-2018).
+# Acquisition timestamp of the dump (Windows Server 2016 DC, SRL-2018).
 ACQUISITION_TIME = datetime(2018, 9, 6, 22, 57, 0, tzinfo=timezone.utc).strftime(TS_FMT)
 
 RULE_META_RE = re.compile(r"rule\s+(\w+)\s*\{.*?meta:(.*?)(?:strings:|condition:)", re.S)
@@ -56,11 +56,11 @@ def _event_time(iso: str) -> str:
         return ACQUISITION_TIME
 
 
-DEST = "base-dc"  # hôte (CIM dest) — contrôleur de domaine compromis (shieldbase.lan)
+DEST = "base-dc"  # host (CIM dest) — compromised domain controller (shieldbase.lan)
 
 
 def process_events(artifacts: Path, image: str):
-    """Champs alignés CIM Endpoint.Processes (process_name, process_id, parent_process_id, dest)."""
+    """Fields aligned with CIM Endpoint.Processes (process_name, process_id, parent_process_id, dest)."""
     data = json.loads((artifacts / "windows_psscan.json").read_text())
     for p in data:
         yield OrderedDict([
@@ -78,7 +78,7 @@ def process_events(artifacts: Path, image: str):
 
 
 def yara_events(artifacts: Path, rules_file: Path, image: str):
-    """Champs alignés CIM Alerts/IDS (signature, severity, dest)."""
+    """Fields aligned with CIM Alerts/IDS (signature, severity, dest)."""
     metas = parse_rule_metadata(rules_file)
     for line in (artifacts / "yara_hits.ndjson").read_text().splitlines():
         for r in json.loads(line).get("rules", []):
@@ -100,7 +100,7 @@ def connect(args) -> client.Service:
     if not pw and (BASE / ".splunk_pass").exists():
         pw = (BASE / ".splunk_pass").read_text().strip()
     if not pw:
-        sys.exit("SPLUNK_PASSWORD manquant (variable d'environnement ou .splunk_pass)")
+        sys.exit("SPLUNK_PASSWORD missing (environment variable or .splunk_pass)")
     return client.connect(
         host=args.host, port=args.port, username=args.username, password=pw,
         scheme="https", verify=False, autologin=True,
@@ -113,12 +113,12 @@ def ingest(index, sourcetype: str, source: str, events, image: str) -> int:
         for ev in events:
             sock.send((json.dumps(ev) + "\n").encode("utf-8"))
             n += 1
-    LOG.info("%s : %d événements ingérés (source=%s)", sourcetype, n, source)
+    LOG.info("%s: %d events ingested (source=%s)", sourcetype, n, source)
     return n
 
 
 def main():
-    ap = argparse.ArgumentParser(description="Ingestion forensique via splunk-sdk-python")
+    ap = argparse.ArgumentParser(description="Forensic ingestion via splunk-sdk-python")
     ap.add_argument("--host", default=os.environ.get("SPLUNK_HOST", "localhost"))
     ap.add_argument("--port", type=int, default=int(os.environ.get("SPLUNK_PORT", "8089")))
     ap.add_argument("--username", default=os.environ.get("SPLUNK_USERNAME", "julien"))
@@ -127,7 +127,7 @@ def main():
     ap.add_argument("--artifacts", default=str(BASE / "artifacts"))
     ap.add_argument("--rules", default=str(BASE / "rules/apt_detection_rules.yar"))
     ap.add_argument("--clean", action="store_true",
-                    help="vide l'index avant d'ingérer (idempotence)")
+                    help="empty the index before ingesting (idempotence)")
     args = ap.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
 
@@ -138,14 +138,14 @@ def main():
     if args.clean:
         before = int(index["totalEventCount"])
         index.clean(timeout=120)
-        LOG.info("index '%s' vidé (%d -> 0 événements)", args.index, before)
+        LOG.info("index '%s' emptied (%d -> 0 events)", args.index, before)
 
     total = 0
     total += ingest(index, "forensics:process", "volatility3:windows.psscan",
                     process_events(artifacts, args.image_name), args.image_name)
     total += ingest(index, "forensics:yara_hit", "yara-x:apt_detection_rules",
                     yara_events(artifacts, Path(args.rules), args.image_name), args.image_name)
-    LOG.info("Total : %d événements -> index %s (splunk-sdk-python)", total, args.index)
+    LOG.info("Total: %d events -> index %s (splunk-sdk-python)", total, args.index)
 
 
 if __name__ == "__main__":

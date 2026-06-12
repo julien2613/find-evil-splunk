@@ -1,4 +1,4 @@
-# Secrets — NE JAMAIS committer
+# Secrets — NEVER commit
 .mcp_token
 .hec_token
 .nvidia_key
@@ -8,20 +8,20 @@
 *.key
 .env
 
-# Environnements / dépendances
+# Environments / dependencies
 .venv/
 web/splunk_react/node_modules/
 __pycache__/
 *.pyc
 
-# Artefacts générés / données lourdes
+# Generated artifacts / large data
 artifacts/
 *.img
 *.spl
 splunk_app/find_evil/lib/
 web/splunk_react/tsconfig.tsbuildinfo
 
-# Outillage captures d'écran (lourd)
+# Screenshot tooling (heavy)
 img/node_modules/
 img/package.json
 img/package-lock.json
