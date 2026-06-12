@@ -92,3 +92,37 @@ body,
     color: #d41f1f;
     font-weight: 800;
 }
+
+/* --- Pastilles (pills) verdict / sévérité --- */
+.fe-pill {
+    display: inline-block;
+    padding: 3px 12px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+    color: #ffffff;
+}
+.fe-critical, .fe-compromis        { background: #d41f1f; }
+.fe-high                           { background: #f79009; }
+.fe-medium, .fe-suspect            { background: #eab308; color: #3a2e00; }
+.fe-low, .fe-ras                   { background: #12b76a; }
+.fe-informational                  { background: #2e90fa; }
+.fe-unknown                        { background: #98a2b3; }
+
+/* --- Rendu markdown élégant (cellule Analyse) --- */
+.fe-md {
+    font-size: 13px;
+    line-height: 1.55;
+    color: #1d2939;
+    white-space: normal;
+    max-width: 900px;
+}
+.fe-md h3 { font-size: 14px; color: #0b1f3a; margin: 12px 0 4px; font-weight: 700; }
+.fe-md h4 { font-size: 13px; color: #344054; margin: 10px 0 3px; font-weight: 700; }
+.fe-md strong { color: #0b1f3a; }
+.fe-md code { background: #eef1f6; color: #b42318; padding: 1px 5px; border-radius: 4px; font-size: 12px; }
+.fe-md ul { margin: 4px 0 8px 18px; padding: 0; }
+.fe-md li { margin: 2px 0; }
+.fe-md hr { border: none; border-top: 1px solid #e4e8f0; margin: 10px 0; }

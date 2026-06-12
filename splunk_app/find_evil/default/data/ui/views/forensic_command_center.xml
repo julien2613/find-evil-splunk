@@ -14,7 +14,7 @@
   "dataSources": {
     "ds_triage": {
       "type": "ds.search",
-      "options": { "query": "search index=forensics sourcetype=forensics:yara_hit | stats count by severity | sort severity" },
+      "options": { "query": "search index=forensics sourcetype=forensics:yara_hit | eval sev_rank=case(severity=\"critical\",1,severity=\"high\",2,severity=\"medium\",3,severity=\"low\",4,severity=\"informational\",5,1=1,6), Sévérité=case(severity=\"critical\",\"Critique\",severity=\"high\",\"Haute\",severity=\"medium\",\"Moyenne\",severity=\"low\",\"Faible\",severity=\"informational\",\"Info\",1=1,\"Autre\") | stats count by Sévérité sev_rank | sort sev_rank | fields Sévérité count" },
       "name": "Triage par sévérité"
     },
     "ds_techniques": {
@@ -61,8 +61,12 @@
       "title": "Processus analysés"
     },
     "viz_severity": {
-      "type": "viz.bar",
-      "options": { "seriesColors": ["#D41F1F"] },
+      "type": "viz.pie",
+      "options": {
+        "showDonutHole": true,
+        "seriesColors": ["#D41F1F", "#F79009", "#EAB308", "#2E90FA", "#12B76A", "#98A2B3"],
+        "legendDisplay": "right"
+      },
       "dataSources": { "primary": "ds_triage" },
       "title": "Détections par sévérité"
     },
@@ -87,15 +91,15 @@
   },
   "layout": {
     "type": "grid",
-    "options": { "width": 1440, "height": 960 },
+    "options": { "width": 1440, "height": 1060 },
     "structure": [
       { "item": "viz_title", "type": "block", "position": { "x": 0, "y": 0, "w": 1440, "h": 110 } },
-      { "item": "viz_crit", "type": "block", "position": { "x": 0, "y": 110, "w": 360, "h": 160 } },
-      { "item": "viz_procs", "type": "block", "position": { "x": 360, "y": 110, "w": 360, "h": 160 } },
-      { "item": "viz_severity", "type": "block", "position": { "x": 720, "y": 110, "w": 720, "h": 160 } },
-      { "item": "viz_attack_tools", "type": "block", "position": { "x": 0, "y": 270, "w": 720, "h": 290 } },
-      { "item": "viz_timeline", "type": "block", "position": { "x": 720, "y": 270, "w": 720, "h": 290 } },
-      { "item": "viz_techniques", "type": "block", "position": { "x": 0, "y": 560, "w": 1440, "h": 400 } }
+      { "item": "viz_crit", "type": "block", "position": { "x": 0, "y": 110, "w": 360, "h": 175 } },
+      { "item": "viz_procs", "type": "block", "position": { "x": 0, "y": 285, "w": 360, "h": 175 } },
+      { "item": "viz_severity", "type": "block", "position": { "x": 360, "y": 110, "w": 480, "h": 350 } },
+      { "item": "viz_attack_tools", "type": "block", "position": { "x": 840, "y": 110, "w": 600, "h": 350 } },
+      { "item": "viz_timeline", "type": "block", "position": { "x": 0, "y": 460, "w": 1440, "h": 240 } },
+      { "item": "viz_techniques", "type": "block", "position": { "x": 0, "y": 700, "w": 1440, "h": 360 } }
     ]
   }
 }

@@ -1,4 +1,4 @@
-<dashboard version="1.1" theme="light" stylesheet="find_evil.css">
+<dashboard version="1.1" theme="light" stylesheet="find_evil.css" script="find_evil_dash.js">
   <label>SOC Incidents (Workflow)</label>
   <description>Incidents générés automatiquement par le workflow SOC : détection YARA critique -> triage IA (| ai) -> incident notable. Détecter, investiguer, automatiser.</description>
 
@@ -24,9 +24,6 @@
         <option name="drilldown">none</option>
         <option name="wrap">true</option>
         <option name="count">10</option>
-        <format type="color" field="verdict">
-          <colorPalette type="map">{"COMPROMIS":#D41F1F,"SUSPECT":#F79009,"RAS":#12B76A}</colorPalette>
-        </format>
       </table>
     </panel>
   </row>
