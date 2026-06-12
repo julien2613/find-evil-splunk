@@ -53,7 +53,7 @@ flowchart TB
 | Fichier | Rôle |
 |---|---|
 | [yara_scan.py](yara_scan.py) | Scan YARA-X de l'image mémoire → `artifacts/yara_hits.ndjson` |
-| [vol_extract.sh](vol_extract.sh) | Extraction Volatility3 (processus) → `artifacts/*.json` |
+| [vol_extract.py](vol_extract.py) | Extraction Volatility3 (processus) → `artifacts/*.json` |
 | [ingest_to_splunk.py](ingest_to_splunk.py) | Pousse les artefacts vers l'index `forensics` via HEC |
 | [forensic_mcp_tools.json](forensic_mcp_tools.json) | Définition des 5 outils MCP forensiques custom |
 | [splunk_app/find_evil/bin/forensic_agent_sdk.py](splunk_app/find_evil/bin/forensic_agent_sdk.py) | **Agent officiel `splunklib.ai`** → verdict + kill-chain MITRE |
@@ -117,7 +117,7 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 
 # 3. Extraction des artefacts depuis l'image mémoire
 .venv/bin/python yara_scan.py        # scan YARA-X
-./vol_extract.sh                     # extraction Volatility3
+python vol_extract.py                     # extraction Volatility3
 
 # 4. Ingestion dans Splunk
 .venv/bin/python ingest_to_splunk.py

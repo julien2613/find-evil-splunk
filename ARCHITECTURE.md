@@ -51,7 +51,7 @@ flowchart TB
 
 ## Flux de données
 
-1. **Extraction** — `yara_scan.py` (YARA-X) et `vol_extract.sh` (Volatility3) → artefacts JSON.
+1. **Extraction** — `yara_scan.py` (YARA-X) et `vol_extract.py` (Volatility3) → artefacts JSON.
 2. **Ingestion** — `ingest_to_splunk.py` pousse les artefacts dans l'index `forensics` via HEC.
 3. **Exposition** — le **Splunk MCP Server** officiel expose 5 outils forensiques custom (SPL sûr).
 4. **Agent officiel** — l'**Agentic Splunk SDK** (`splunklib.ai`) se connecte au service Splunk,

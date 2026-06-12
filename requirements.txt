@@ -1,3 +1,4 @@
+splunk-sdk>=3.0.0    # SDK officiel : ingestion (index.attached_socket) + agent splunklib.ai
 # Pipeline d'extraction + ingestion forensique
 volatility3==2.28.0   # extraction processus depuis l'image mémoire
 yara-x==1.17.0        # bindings Python (le scan utilise aussi le CLI `yr`)

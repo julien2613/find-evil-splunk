@@ -38,6 +38,26 @@ sourcetype = forensics:event
 EOF
 echo "    HEC token: $HEC_TOKEN"
 
+# props.conf : parsing JSON + _time depuis event_time (évidence 2018 -> MAX_DAYS_AGO).
+# Requis par l'ingestion via le SDK (index.attached_socket) — voir ingest_to_splunk.py.
+cat > "$APP/props.conf" <<'EOF'
+[forensics:process]
+INDEXED_EXTRACTIONS = json
+TIMESTAMP_FIELDS = event_time
+TIME_FORMAT = %Y-%m-%dT%H:%M:%S%z
+MAX_DAYS_AGO = 4000
+KV_MODE = none
+AUTO_KV_JSON = false
+
+[forensics:yara_hit]
+INDEXED_EXTRACTIONS = json
+TIMESTAMP_FIELDS = event_time
+TIME_FORMAT = %Y-%m-%dT%H:%M:%S%z
+MAX_DAYS_AGO = 4000
+KV_MODE = none
+AUTO_KV_JSON = false
+EOF
+
 echo "==> 2. Redémarrage Splunk (prise en compte index/HEC)"
 "$SPLUNK_HOME/bin/splunk" restart > /dev/null
 sleep 5
