@@ -9,54 +9,11 @@ MGMT="https://localhost:8089"
 AUTH="${SPLUNK_AUTH:?Exporter SPLUNK_AUTH='user:pass' avant de lancer}"
 HERE="$(cd "$(dirname "$0")" && pwd)"
 
-echo "==> 1. App forensics_ingest (index + HEC)"
-APP="$SPLUNK_HOME/etc/apps/forensics_ingest/local"
-mkdir -p "$APP/../metadata" "$APP"
-HEC_TOKEN="$(cat "$HERE/.hec_token" 2>/dev/null || uuidgen | tr 'A-Z' 'a-z')"
-echo "$HEC_TOKEN" > "$HERE/.hec_token"; chmod 600 "$HERE/.hec_token"
-
-cat > "$APP/indexes.conf" <<EOF
-[forensics]
-homePath = \$SPLUNK_DB/forensics/db
-coldPath = \$SPLUNK_DB/forensics/colddb
-thawedPath = \$SPLUNK_DB/forensics/thaweddb
-maxTotalDataSizeMB = 10240
-frozenTimePeriodInSecs = 315360000
-EOF
-
-cat > "$APP/inputs.conf" <<EOF
-[http]
-disabled = 0
-enableSSL = 1
-
-[http://forensics_hec]
-disabled = 0
-token = $HEC_TOKEN
-index = forensics
-indexes = forensics
-sourcetype = forensics:event
-EOF
-echo "    HEC token: $HEC_TOKEN"
-
-# props.conf : parsing JSON + _time depuis event_time (évidence 2018 -> MAX_DAYS_AGO).
-# Requis par l'ingestion via le SDK (index.attached_socket) — voir ingest_to_splunk.py.
-cat > "$APP/props.conf" <<'EOF'
-[forensics:process]
-INDEXED_EXTRACTIONS = json
-TIMESTAMP_FIELDS = event_time
-TIME_FORMAT = %Y-%m-%dT%H:%M:%S%z
-MAX_DAYS_AGO = 4000
-KV_MODE = none
-AUTO_KV_JSON = false
-
-[forensics:yara_hit]
-INDEXED_EXTRACTIONS = json
-TIMESTAMP_FIELDS = event_time
-TIME_FORMAT = %Y-%m-%dT%H:%M:%S%z
-MAX_DAYS_AGO = 4000
-KV_MODE = none
-AUTO_KV_JSON = false
-EOF
+echo "==> 1. Déploiement du TA versionné forensics_ingest (index + sourcetypes)"
+# Source unique de vérité : le TA du repo (indexes.conf + props.conf + app.conf).
+# L'ingestion se fait via le SDK Python (ingest_to_splunk.py) — pas de HEC.
+cp -R "$HERE/splunk_app/forensics_ingest/." "$SPLUNK_HOME/etc/apps/forensics_ingest/"
+echo "    TA déployé (les réglages index-time de props.conf s'appliquent au redémarrage)"
 
 echo "==> 2. Redémarrage Splunk (prise en compte index/HEC)"
 "$SPLUNK_HOME/bin/splunk" restart > /dev/null
