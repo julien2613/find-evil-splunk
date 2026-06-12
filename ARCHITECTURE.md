@@ -41,7 +41,7 @@ flowchart TB
         ALERT["Alerte planifiée (savedsearches.conf)<br/>détecte YARA critique -> | ai -> collect"]
     end
 
-    YARA & VOL -->|"ingest_to_splunk.py (HEC)"| HEC
+    YARA & VOL -->|"ingest_to_splunk.py (splunk-sdk)"| HEC
     TOOLS <-->|"SPL sûr (safe-SPL)"| IDX
     AITK -->|"| ai prompt"| LLM["LLM Claude (Anthropic)"]
     SDK <-->|"auto-discovery / tools/call"| SRV
@@ -52,7 +52,7 @@ flowchart TB
 ## Flux de données
 
 1. **Extraction** — `yara_scan.py` (YARA-X) et `vol_extract.py` (Volatility3) → artefacts JSON.
-2. **Ingestion** — `ingest_to_splunk.py` pousse les artefacts dans l'index `forensics` via HEC.
+2. **Ingestion** — `ingest_to_splunk.py` pousse les artefacts dans l'index `forensics` via le SDK (index.attached_socket) + props.conf.
 3. **Exposition** — le **Splunk MCP Server** officiel expose 5 outils forensiques custom (SPL sûr).
 4. **Agent officiel** — l'**Agentic Splunk SDK** (`splunklib.ai`) se connecte au service Splunk,
    **auto-découvre les outils du MCP Server**, raisonne avec Claude, et produit :

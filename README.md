@@ -24,10 +24,10 @@ flowchart TB
         IMG --> YARA & VOL
     end
     subgraph SPL["2 · Splunk Enterprise (local)"]
-        HEC["HTTP Event Collector"]
+        SDKING["splunk-sdk-python<br/>index.attached_socket"]
         IDX["index=forensics<br/>forensics:process · forensics:yara_hit"]
         DASH["Dashboard Studio<br/>Forensic Command Center"]
-        HEC --> IDX --> DASH
+        SDKING --> IDX --> DASH
     end
     subgraph AG["3 · Couche agentique"]
         MCP["Splunk MCP Server (officiel)<br/>/services/mcp"]
@@ -40,7 +40,7 @@ flowchart TB
         REACT["renderer React @splunk/react-ui<br/>vue A2UI Native"]
         SDK --> A2 --> REACT
     end
-    YARA & VOL -->|"ingest_to_splunk.py (HEC)"| HEC
+    YARA & VOL -->|"ingest_to_splunk.py (splunk-sdk)"| HEC
     TOOLS <-->|SPL sûr| IDX
     SDK <-->|"auto-discovery / tools/call"| MCP
     SDK -->|rapport| OUT["verdict + kill-chain MITRE<br/>rendu en composants Splunk natifs"]
