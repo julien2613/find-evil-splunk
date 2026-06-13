@@ -14,8 +14,8 @@ web/splunk_react/node_modules/
 __pycache__/
 *.pyc
 
-# Generated artifacts / large data
-artifacts/
+# Large data / generated packages
+# Note: artifacts/ is committed as forensic evidence (raw extraction + incident report).
 *.img
 *.spl
 splunk_app/find_evil/lib/

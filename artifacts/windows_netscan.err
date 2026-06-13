@@ -1,0 +1,9 @@
+Volatility 3 Framework 2.28.0
+Volatility was unable to read a requested page:
+Page error 0xd9822e0a6008 in layer layer_name (Page Fault at entry 0x2b44f200000000 in page entry)
+
+	* Memory smear during acquisition (try re-acquiring if possible)
+	* An intentionally invalid page lookup (operating system protection)
+	* A bug in the plugin/volatility3 (re-run with -vvv and file a bug)
+
+No further results will be produced

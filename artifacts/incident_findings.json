@@ -1,0 +1,406 @@
+{
+  "techniques": [
+    {
+      "rule": "LOLBin_NTDS_Access",
+      "severity": "critical",
+      "mitre": "T1003.003, T1074",
+      "description": "LOLBin tools accessing Active Directory database"
+    },
+    {
+      "rule": "Credential_Dumping_Framework",
+      "severity": "critical",
+      "mitre": "T1003.001",
+      "description": "Credential dumping framework signatures (mimikatz, etc.)"
+    },
+    {
+      "rule": "NTDS_Staging_Path",
+      "severity": "critical",
+      "mitre": "T1074.001",
+      "description": "NTDS.dit staged in temp directory"
+    },
+    {
+      "rule": "NTDS_Extraction_ntdsutil",
+      "severity": "critical",
+      "mitre": "T1003.003",
+      "description": "NTDS.dit extraction via ntdsutil IFM"
+    },
+    {
+      "rule": "Schtasks_Persistence_Creation",
+      "severity": "high",
+      "mitre": "T1053.005",
+      "description": "Scheduled task creation for persistence"
+    },
+    {
+      "rule": "LOLBin_Download_Tools",
+      "severity": "high",
+      "mitre": "T1105",
+      "description": "Living-off-the-land download (bitsadmin, certutil, curl)"
+    },
+    {
+      "rule": "PsExec_Remote_Execution",
+      "severity": "high",
+      "mitre": "T1021.002",
+      "description": "PsExec-style remote execution"
+    },
+    {
+      "rule": "WMI_Remote_Execution",
+      "severity": "high",
+      "mitre": "T1021.006, T1047",
+      "description": "WMI remote execution for lateral movement"
+    },
+    {
+      "rule": "PowerShell_Remote_Download",
+      "severity": "high",
+      "mitre": "T1105",
+      "description": "PowerShell downloading remote payload"
+    },
+    {
+      "rule": "PowerShell_Obfuscated_Execution",
+      "severity": "high",
+      "mitre": "T1059.001, T1027",
+      "description": "PowerShell with obfuscation/encoding"
+    },
+    {
+      "rule": "Shadow_Copy_Credential_Theft",
+      "severity": "high",
+      "mitre": "T1003, T1006",
+      "description": "Credential extraction via VSS shadow copies"
+    },
+    {
+      "rule": "PowerShell_Remoting_Session",
+      "severity": "medium",
+      "mitre": "T1021.006",
+      "description": "PowerShell Remoting (WinRM/WS-Man) session"
+    },
+    {
+      "rule": "Recycle_Bin_Antiforensic",
+      "severity": "medium",
+      "mitre": "T1070",
+      "description": "Move to Recycle Bin for anti-forensic cleanup"
+    },
+    {
+      "rule": "SRL2018_Scenario_Markers",
+      "severity": "informational",
+      "mitre": "",
+      "description": "Specific markers for SRL-2018 scenario (shieldbase.lan domain)"
+    },
+    {
+      "rule": "Defender_Blocked_Execution",
+      "severity": "informational",
+      "mitre": "",
+      "description": "Windows Defender blocked malicious execution"
+    }
+  ],
+  "triage": [
+    {
+      "severity": "high",
+      "mitre": "T1105",
+      "detections": "2",
+      "rules": [
+        "LOLBin_Download_Tools",
+        "PowerShell_Remote_Download"
+      ]
+    },
+    {
+      "severity": "informational",
+      "mitre": "",
+      "detections": "2",
+      "rules": [
+        "Defender_Blocked_Execution",
+        "SRL2018_Scenario_Markers"
+      ]
+    },
+    {
+      "severity": "critical",
+      "mitre": "T1003.001",
+      "detections": "1",
+      "rules": "Credential_Dumping_Framework"
+    },
+    {
+      "severity": "critical",
+      "mitre": "T1003.003",
+      "detections": "1",
+      "rules": "NTDS_Extraction_ntdsutil"
+    },
+    {
+      "severity": "critical",
+      "mitre": "T1003.003, T1074",
+      "detections": "1",
+      "rules": "LOLBin_NTDS_Access"
+    },
+    {
+      "severity": "critical",
+      "mitre": "T1074.001",
+      "detections": "1",
+      "rules": "NTDS_Staging_Path"
+    },
+    {
+      "severity": "high",
+      "mitre": "T1003, T1006",
+      "detections": "1",
+      "rules": "Shadow_Copy_Credential_Theft"
+    },
+    {
+      "severity": "high",
+      "mitre": "T1021.002",
+      "detections": "1",
+      "rules": "PsExec_Remote_Execution"
+    },
+    {
+      "severity": "high",
+      "mitre": "T1021.006, T1047",
+      "detections": "1",
+      "rules": "WMI_Remote_Execution"
+    },
+    {
+      "severity": "high",
+      "mitre": "T1053.005",
+      "detections": "1",
+      "rules": "Schtasks_Persistence_Creation"
+    },
+    {
+      "severity": "high",
+      "mitre": "T1059.001, T1027",
+      "detections": "1",
+      "rules": "PowerShell_Obfuscated_Execution"
+    },
+    {
+      "severity": "medium",
+      "mitre": "T1021.006",
+      "detections": "1",
+      "rules": "PowerShell_Remoting_Session"
+    },
+    {
+      "severity": "medium",
+      "mitre": "T1070",
+      "detections": "1",
+      "rules": "Recycle_Bin_Antiforensic"
+    }
+  ],
+  "processes": {
+    "powershell.exe": [
+      {
+        "create_time": "2018-08-16T22:10:54+00:00",
+        "pid": "5612",
+        "ppid": "4932",
+        "process_name": "powershell.exe",
+        "session_id": "1",
+        "threads": "12"
+      }
+    ],
+    "cmd.exe": [
+      {
+        "create_time": "2018-08-16T21:37:38+00:00",
+        "pid": "4508",
+        "ppid": "4300",
+        "process_name": "cmd.exe",
+        "session_id": "1",
+        "threads": "1"
+      },
+      {
+        "create_time": "2018-08-17T00:59:00+00:00",
+        "pid": "2284",
+        "ppid": "4300",
+        "process_name": "cmd.exe",
+        "session_id": "1",
+        "threads": "1"
+      },
+      {
+        "create_time": "2018-09-01T17:18:03+00:00",
+        "pid": "5068",
+        "ppid": "4840",
+        "process_name": "cmd.exe",
+        "session_id": "0",
+        "threads": "0"
+      },
+      {
+        "create_time": "2018-09-01T17:43:10+00:00",
+        "pid": "3400",
+        "ppid": "3564",
+        "process_name": "cmd.exe",
+        "session_id": "0",
+        "threads": "0"
+      },
+      {
+        "create_time": "2018-09-01T17:43:10+00:00",
+        "pid": "6648",
+        "ppid": "3564",
+        "process_name": "cmd.exe",
+        "session_id": "0",
+        "threads": "0"
+      },
+      {
+        "create_time": "2018-09-01T17:48:11+00:00",
+        "pid": "4588",
+        "ppid": "908",
+        "process_name": "cmd.exe",
+        "session_id": "0",
+        "threads": "0"
+      },
+      {
+        "create_time": "2018-09-01T21:19:14+00:00",
+        "pid": "6640",
+        "ppid": "8988",
+        "process_name": "cmd.exe",
+        "session_id": "0",
+        "threads": "0"
+      },
+      {
+        "create_time": "2018-09-02T00:30:13+00:00",
+        "pid": "6604",
+        "ppid": "4444",
+        "process_name": "cmd.exe",
+        "session_id": "0",
+        "threads": "0"
+      },
+      {
+        "create_time": "2018-09-02T01:15:25+00:00",
+        "pid": "5948",
+        "ppid": "7124",
+        "process_name": "cmd.exe",
+        "session_id": "0",
+        "threads": "0"
+      },
+      {
+        "create_time": "2018-09-02T01:15:25+00:00",
+        "pid": "7204",
+        "ppid": "7124",
+        "process_name": "cmd.exe",
+        "session_id": "0",
+        "threads": "0"
+      },
+      {
+        "create_time": "2018-09-03T18:11:30+00:00",
+        "pid": "8872",
+        "ppid": "8664",
+        "process_name": "cmd.exe",
+        "session_id": "0",
+        "threads": "0"
+      },
+      {
+        "create_time": "2018-09-03T21:22:22+00:00",
+        "pid": "4960",
+        "ppid": "6584",
+        "process_name": "cmd.exe",
+        "session_id": "0",
+        "threads": "0"
+      },
+      {
+        "create_time": "2018-09-03T21:22:22+00:00",
+        "pid": "8792",
+        "ppid": "6584",
+        "process_name": "cmd.exe",
+        "session_id": "0",
+        "threads": "0"
+      },
+      {
+        "create_time": "2018-09-04T14:42:09+00:00",
+        "pid": "7732",
+        "ppid": "7696",
+        "process_name": "cmd.exe",
+        "session_id": "0",
+        "threads": "0"
+      },
+      {
+        "create_time": "2018-09-04T15:07:15+00:00",
+        "pid": "6156",
+        "ppid": "940",
+        "process_name": "cmd.exe",
+        "session_id": "0",
+        "threads": "0"
+      },
+      {
+        "create_time": "2018-09-06T17:47:38+00:00",
+        "pid": "4648",
+        "ppid": "1036",
+        "process_name": "cmd.exe",
+        "session_id": "0",
+        "threads": "0"
+      },
+      {
+        "create_time": "2018-09-06T17:47:38+00:00",
+        "pid": "1036",
+        "ppid": "908",
+        "process_name": "cmd.exe",
+        "session_id": "0",
+        "threads": "0"
+      },
+      {
+        "create_time": "2018-09-06T17:47:39+00:00",
+        "pid": "2308",
+        "ppid": "1036",
+        "process_name": "cmd.exe",
+        "session_id": "0",
+        "threads": "0"
+      },
+      {
+        "create_time": "2018-09-06T17:47:39+00:00",
+        "pid": "6940",
+        "ppid": "1036",
+        "process_name": "cmd.exe",
+        "session_id": "0",
+        "threads": "0"
+      },
+      {
+        "create_time": "2018-09-06T18:17:46+00:00",
+        "pid": "3380",
+        "ppid": "908",
+        "process_name": "cmd.exe",
+        "session_id": "0",
+        "threads": "0"
+      },
+      {
+        "create_time": "2018-09-06T18:17:46+00:00",
+        "pid": "6572",
+        "ppid": "3380",
+        "process_name": "cmd.exe",
+        "session_id": "0",
+        "threads": "0"
+      },
+      {
+        "create_time": "2018-09-06T22:53:58+00:00",
+        "pid": "8220",
+        "ppid": "6628",
+        "process_name": "cmd.exe",
+        "session_id": "0",
+        "threads": "0"
+      },
+      {
+        "create_time": "2018-09-06T22:53:58+00:00",
+        "pid": "7260",
+        "ppid": "6628",
+        "process_name": "cmd.exe",
+        "session_id": "0",
+        "threads": "0"
+      },
+      {
+        "create_time": "2018-09-06T22:53:58+00:00",
+        "pid": "6628",
+        "ppid": "908",
+        "process_name": "cmd.exe",
+        "session_id": "0",
+        "threads": "0"
+      },
+      {
+        "create_time": "2018-09-06T22:53:58+00:00",
+        "pid": "9012",
+        "ppid": "6628",
+        "process_name": "cmd.exe",
+        "session_id": "0",
+        "threads": "0"
+      }
+    ]
+  },
+  "timeline": [
+    {
+      "_time": "2026-06-11 07:17:26.000 CEST",
+      "kind": "process"
+    }
+  ],
+  "_tools_used": [
+    "forensics_attack_timeline",
+    "forensics_find_attack_techniques",
+    "forensics_investigate_process",
+    "forensics_triage_summary"
+  ]
+}
