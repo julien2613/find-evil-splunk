@@ -25,8 +25,8 @@ flowchart TB
     end
     subgraph SPL["2 · Splunk Enterprise (local)"]
         SDKING["splunk-sdk-python<br/>index.attached_socket"]
-        IDX["index=forensics<br/>forensics:process · forensics:yara_hit"]
-        DASH["Dashboard Studio<br/>Forensic Command Center"]
+        IDX["index=forensics<br/>forensics:process · forensics:yara_hit · forensics:incident"]
+        DASH["4 A2UI dashboards (@splunk/react-ui)<br/>Command Center · AI Investigation · SOC Incidents · A2UI Native"]
         SDKING --> IDX --> DASH
     end
     subgraph AG["3 · Agentic layer"]
@@ -37,10 +37,11 @@ flowchart TB
     subgraph AGENT["4 · Official Splunk agent (splunklib.ai)"]
         SDK["Agentic Splunk SDK + Claude<br/>auto-discovery of MCP tools"]
         A2["A2UI v0.9 output<br/>(data model + bindings + templates)"]
-        REACT["React renderer @splunk/react-ui<br/>A2UI Native view"]
+        REACT["React renderer @splunk/react-ui<br/>drives all 4 dashboards"]
         SDK --> A2 --> REACT
     end
-    YARA & VOL -->|"ingest_to_splunk.py (splunk-sdk)"| HEC
+    YARA & VOL -->|"ingest_to_splunk.py (splunk-sdk)"| SDKING
+    REACT -->|"script= in SimpleXML"| DASH
     TOOLS <-->|safe SPL| IDX
     SDK <-->|"auto-discovery / tools/call"| MCP
     SDK -->|report| OUT["verdict + MITRE kill-chain<br/>rendered in native Splunk components"]
@@ -54,13 +55,14 @@ flowchart TB
 |---|---|
 | [yara_scan.py](yara_scan.py) | YARA-X scan of the memory image → `artifacts/yara_hits.ndjson` |
 | [vol_extract.py](vol_extract.py) | Volatility3 extraction (processes) → `artifacts/*.json` |
-| [ingest_to_splunk.py](ingest_to_splunk.py) | Pushes artifacts to the `forensics` index via HEC |
+| [ingest_to_splunk.py](ingest_to_splunk.py) | Streams artifacts to the `forensics` index via the splunk-sdk (`index.attached_socket`) |
 | [forensic_mcp_tools.json](forensic_mcp_tools.json) | Definition of the 5 custom forensic MCP tools |
 | [splunk_app/find_evil/bin/forensic_agent_sdk.py](splunk_app/find_evil/bin/forensic_agent_sdk.py) | **Official `splunklib.ai` agent** → verdict + MITRE kill-chain |
 | [splunk_app/find_evil/bin/a2ui_agent.py](splunk_app/find_evil/bin/a2ui_agent.py) | Official agent → **A2UI v0.9** output (native React rendering) |
 | [rules/apt_detection_rules.yar](rules/apt_detection_rules.yar) | 15 APT rules (calibrated for SRL-2018) |
-| `forensics_ingest/` (Splunk app) | Index, HEC, *Forensic Command Center* dashboard |
-| [splunk_app/find_evil/](splunk_app/find_evil/) | **Distributable Splunk app**: nav + *AI Investigation* dashboard (native controls driving `\| ai`) + *Command Center* |
+| `forensics_ingest/` (Splunk app) | **Ingestion TA**: `forensics` index + CIM-aligned sourcetype `props.conf` |
+| [splunk_app/find_evil/](splunk_app/find_evil/) | **Distributable Splunk app**: the 4 A2UI dashboards, MCP tools, the `splunklib.ai` agent and the SOC workflow |
+| [terraform/](terraform/) | **Delivery as code**: packages the apps and installs them + index (`splunk/splunk` provider) |
 | [forensic_ai_tool.json](forensic_ai_tool.json) | `ai_triage` MCP tool (`\| ai` via the AI Toolkit) |
 | [AI_TOOLKIT_SETUP.md](AI_TOOLKIT_SETUP.md) | AI Toolkit installation procedure (PSC, role, connection) |
 
@@ -112,7 +114,7 @@ The AI reasoning is thus **native to the Splunk engine**, and exposed to the age
 # 1. Python environment
 python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 
-# 2. Splunk setup (index + HEC + MCP tools) — see setup.sh for details
+# 2. Splunk setup (index + sourcetypes + MCP tools) — see setup.sh for details
 ./setup.sh
 
 # 3. Extract artifacts from the memory image
