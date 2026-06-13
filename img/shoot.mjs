@@ -9,15 +9,16 @@ const OUT = process.cwd();
 const VIEWS = [
   { name: "01_app_launcher", url: `${BASE}/app/launcher/home`, wait: 4000 },
   { name: "02_a2ui_native", url: `${BASE}/app/find_evil/a2ui_native`, wait: 7000 },
-  { name: "03_soc_incidents", url: `${BASE}/app/find_evil/soc_incidents`, wait: 9000 },
-  { name: "04_ai_investigation", url: `${BASE}/app/find_evil/ai_investigation`, wait: 38000 },
-  { name: "05_command_center", url: `${BASE}/app/find_evil/forensic_command_center`, wait: 12000 },
+  { name: "03_soc_incidents", url: `${BASE}/app/find_evil/soc_incidents`, wait: 8000 },
+  { name: "04_ai_investigation", url: `${BASE}/app/find_evil/ai_investigation`, wait: 8000 },
+  { name: "05_command_center", url: `${BASE}/app/find_evil/forensic_command_center`, wait: 10000 },
 ];
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 const browser = await chromium.launch({ channel: "chrome", headless: true });
-const ctx = await browser.newContext({ viewport: { width: 1600, height: 1000 }, ignoreHTTPSErrors: true });
+// deviceScaleFactor: 2 → retina (2x) screenshots, crisp text
+const ctx = await browser.newContext({ viewport: { width: 1600, height: 1000 }, deviceScaleFactor: 2, ignoreHTTPSErrors: true });
 const page = await ctx.newPage();
 
 // --- Login Splunk ---
