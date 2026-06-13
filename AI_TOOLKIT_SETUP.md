@@ -1,18 +1,16 @@
 # Splunk AI Toolkit setup (`| ai` command)
 
-Find Evil uses the **`| ai`** SPL command of the Splunk AI Toolkit to make a model reason
-**inside the search engine**. On **local Splunk Enterprise** (macOS Apple Silicon), getting it
-running requires the steps below — all discovered and validated on this machine.
+Find Evil uses the **`| ai`** SPL command of the Splunk AI Toolkit to make a model reason **directly inside the Splunk search engine**.
 
-## Where `| ai` is used
-- **`forensics_ai_triage`** MCP tool — aggregates the YARA detections and asks Claude, via `| ai`,
-  for a verdict + kill-chain + remediation, all from one SPL pipeline (see [`../forensic_ai_tool.json`](forensic_ai_tool.json)).
-- **Automated SOC workflow** — the scheduled saved search `Find Evil - Auto Triage Workflow`
-  detects critical detections, runs `| ai`, and writes a notable `forensics:incident`.
+This is one of the two AI paths in the project (the other is the official `splunklib.ai` Agent that talks to Claude via the Anthropic API and auto-discovers our MCP tools). The `| ai` path is what enables:
 
-> The **dashboards** render pre-built **A2UI snapshots** (`@splunk/react-ui` controls), not a live
-> `| ai` panel — so viewing the dashboards does not require `| ai`. It is the **workflow** and the
-> **`ai_triage` tool** that need the setup below.
+- The `forensics_ai_triage` MCP tool (the agent or an analyst can ask for an AI verdict from inside Splunk).
+- The **fully automated SOC workflow** (`Find Evil - Auto Triage Workflow` saved search) that detects critical YARA hits, runs `| ai` for verdict + kill-chain + recommendations, and writes a `forensics:incident` with zero manual steps.
+
+On **local Splunk Enterprise on macOS Apple Silicon**, getting `| ai` running is non-trivial. The steps below are the exact procedure that worked on this machine.
+
+> **Important**: The four A2UI dashboards themselves render **pre-built snapshots** (`forensic_report.a2ui.json`, `command.a2ui.json`, etc.). They do **not** require `| ai` at view time. Only the `ai_triage` MCP tool and the scheduled SOC alert need the AI Toolkit configured.
+
 
 ## 1. Install the AI Toolkit
 - Splunkbase **app 2890** → `Splunk_ML_Toolkit` in `etc/apps/`.
@@ -50,9 +48,27 @@ In **AI Toolkit → Connections** (`/app/Splunk_ML_Toolkit/connections`):
 ```spl
 | makeresults | ai connection="claude" prompt="say hello"
 ```
-Should return a model response. After that, the `forensics_ai_triage` MCP tool and the SOC
-workflow both work.
+Should return a model response. After that, both the `forensics_ai_triage` MCP tool and the scheduled SOC workflow will work.
 
-> Note: this `| ai` setup is the Splunk AI Toolkit path. The `splunklib.ai` **agent**
-> (`bin/a2ui_agent.py`, `bin/forensic_agent_sdk.py`) talks to Claude through the Anthropic API
-> directly and does not depend on the AI Toolkit.
+## 6. Ownership of the automated SOC alert (important)
+
+The saved search `Find Evil - Auto Triage Workflow` (in `find_evil/default/savedsearches.conf`) dispatches `| ai` on a schedule.
+
+It **must be owned by (or run as) a user who has the `apply_ai_commander_command` capability** (typically by assigning the `mltk_admin` role).
+
+After installing the app via Terraform or manually, you usually need to fix the owner/ACL:
+
+```bash
+curl -sk -u admin:password -X POST \
+  "https://localhost:8089/servicesNS/nobody/find_evil/saved/searches/Find%20Evil%20-%20Auto%20Triage%20Workflow/acl" \
+  -d owner=julien -d sharing=app
+```
+
+---
+
+**Summary of the two AI paths in Find Evil**
+
+- **splunklib.ai Agent path** (`forensic_agent_sdk.py` / `a2ui_agent.py`): Uses the official Agentic SDK + direct Anthropic calls + auto-discovery of our 5 MCP tools. Produces text or A2UI. Runs as a script that connects to Splunk.
+- **`| ai` inside SPL path**: LLM reasoning happens inside the Splunk search process. Powers the `ai_triage` tool exposed to the MCP Server and (crucially) the hands-off scheduled SOC workflow that creates `forensics:incident` events.
+
+Both ultimately feed the same A2UI dashboards and the same `forensics` index.
