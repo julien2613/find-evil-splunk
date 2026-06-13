@@ -3,10 +3,14 @@
 .hec_token
 .nvidia_key
 .anthropic_key
+.openai_key
 .mcp.json
 .splunk_pass
 *.key
 .env
+
+# Video tooling — local only, excluded from the deliverable
+video/
 
 # Environments / dependencies
 .venv/
