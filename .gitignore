@@ -4,13 +4,16 @@
 .nvidia_key
 .anthropic_key
 .openai_key
+.xai_key
 .mcp.json
 .splunk_pass
 *.key
 .env
 
-# Video tooling — local only, excluded from the deliverable
+# Local-only working docs — excluded from the deliverable
 video/
+SUBMISSION.md
+VIDEO_STORYBOARD.md
 
 # Environments / dependencies
 .venv/
