@@ -28,3 +28,9 @@ variable "index_name" {
   type        = string
   default     = "forensics"
 }
+
+variable "spl_dir" {
+  description = "Directory (readable by the Splunk server) holding the packaged .spl archives. Override for a remote/containerized Splunk where the path differs from the host (e.g. /spl when bind-mounted)."
+  type        = string
+  default     = null
+}

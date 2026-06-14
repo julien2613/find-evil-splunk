@@ -14,6 +14,9 @@ locals {
     find_evil        = "${path.module}/../splunk_app/find_evil"
     forensics_ingest = "${path.module}/../splunk_app/forensics_ingest"
   }
+  # Where splunkd reads the .spl from. Defaults to the host dist/ dir; override via
+  # var.spl_dir for a remote/containerized Splunk (e.g. /spl when bind-mounted).
+  spl_dir = coalesce(var.spl_dir, abspath("${path.module}/dist"))
 }
 
 # Build the .spl archives from the app sources before installing. The trigger hashes
@@ -38,7 +41,7 @@ resource "null_resource" "package" {
 # Ingestion add-on: provisions the `forensics` index (indexes.conf) and the
 # CIM-aligned sourcetype props (forensics:process, forensics:yara_hit, forensics:incident).
 resource "splunk_apps_local" "forensics_ingest" {
-  name             = abspath("${path.module}/dist/forensics_ingest.spl")
+  name             = "${local.spl_dir}/forensics_ingest.spl"
   filename         = true
   explicit_appname = "forensics_ingest"
   update           = true
@@ -50,7 +53,7 @@ resource "splunk_apps_local" "forensics_ingest" {
 # agent and the automated SOC triage workflow (savedsearches.conf).
 # Installed after the TA so the forensics index exists before its searches load.
 resource "splunk_apps_local" "find_evil" {
-  name             = abspath("${path.module}/dist/find_evil.spl")
+  name             = "${local.spl_dir}/find_evil.spl"
   filename         = true
   explicit_appname = "find_evil"
   update           = true

@@ -1,0 +1,35 @@
+# Clean Splunk Enterprise in a container, to test the Terraform deployment from scratch.
+#
+#   1) python3 ../terraform/package.py          # build ../terraform/dist/*.spl (bind-mounted below)
+#   2) SPLUNK_PASSWORD='Changeme123' docker compose up -d   # ~5-10 min on Apple Silicon (amd64 emulation)
+#   3) cd ../terraform && terraform init && \
+#      SPLUNK_USERNAME=admin SPLUNK_PASSWORD='Changeme123' \
+#      terraform apply -var splunk_url=localhost:18089 -var splunk_web_url=http://localhost:18000 -var spl_dir=/spl
+#   4) open http://localhost:18000  (admin / your password)
+#   5) docker compose down -v
+#
+# Note: the image is amd64-only -> emulated (slow) on arm64. The MCP Server / AI Toolkit are
+# NOT in the image, so the live agent / | ai won't run here — but the Terraform deploy (index +
+# both apps) and the A2UI dashboards (which render bundled snapshots) ARE validated on a clean instance.
+
+services:
+  splunk:
+    image: splunk/splunk:latest
+    platform: linux/amd64
+    container_name: find-evil-splunk
+    hostname: splunk
+    environment:
+      SPLUNK_START_ARGS: --accept-license
+      SPLUNK_PASSWORD: ${SPLUNK_PASSWORD:?set SPLUNK_PASSWORD (>= 8 chars)}
+    ports:
+      - "18000:8000" # Splunk Web
+      - "18089:8089" # management / REST (Terraform target)
+    volumes:
+      # The packaged apps, readable by splunkd at /spl (matches `terraform apply -var spl_dir=/spl`).
+      - ../terraform/dist:/spl:ro
+    healthcheck:
+      test: ["CMD", "curl", "-skf", "https://localhost:8089/services/server/info", "-o", "/dev/null"]
+      interval: 15s
+      timeout: 10s
+      retries: 40
+      start_period: 120s
