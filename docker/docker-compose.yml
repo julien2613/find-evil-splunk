@@ -19,6 +19,8 @@ services:
     container_name: find-evil-splunk
     hostname: splunk
     environment:
+      # Recent images require BOTH the general-terms and the start-args license flags.
+      SPLUNK_GENERAL_TERMS: --accept-sgt-current-at-splunk-com
       SPLUNK_START_ARGS: --accept-license
       SPLUNK_PASSWORD: ${SPLUNK_PASSWORD:?set SPLUNK_PASSWORD (>= 8 chars)}
     ports:
