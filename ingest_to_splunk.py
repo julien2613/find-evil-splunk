@@ -1,16 +1,19 @@
 #!/usr/bin/env python3
 """Forensic ingestion into Splunk — via the official Python SDK (splunk-sdk-python).
 
-Connects to the Splunk service then uses index.attached_socket() to stream JSON
-events; parsing (fields + _time from event_time) is handled by the versioned TA
-`splunk_app/forensics_ingest` (props.conf).
+Uses the official SDK (https://github.com/splunk/splunk-sdk-python): connects to the
+Splunk service, then streams JSON events with `Index.attached_socket()` (the SDK's
+streaming-input idiom, backed by the receivers/stream endpoint). Parsing (fields +
+_time from event_time) is handled by the versioned TA `splunk_app/forensics_ingest`
+(props.conf); the same TA tags the events into the CIM datamodels (eventtypes.conf +
+tags.conf): forensics:process -> Endpoint.Processes, forensics:yara_hit -> Alerts.
 
 Sourcetypes produced (fields aligned with CIM — Common Information Model)
 -------------------------------------------------------------------
 forensics:process   — a process (Volatility3 windows.psscan) — CIM Endpoint.Processes
     event_time, dest, process_name, process_id, parent_process_id, create_time,
     exit_time, threads, session_id, wow64, offset_v, image, host_role, os
-forensics:yara_hit  — a YARA detection (apt_detection_rules.yar) — CIM Alerts/IDS
+forensics:yara_hit  — a YARA detection (apt_detection_rules.yar) — CIM Alerts
     event_time, dest, signature, description, severity, mitre, image, host_role
 
 Config (CLI or env): --host/SPLUNK_HOST, --port/SPLUNK_PORT, --username/SPLUNK_USERNAME,
@@ -59,9 +62,22 @@ def _event_time(iso: str) -> str:
 DEST = "base-dc"  # host (CIM dest) — compromised domain controller (shieldbase.lan)
 
 
+def _require(path: Path) -> Path:
+    if not path.exists():
+        sys.exit(f"Missing artifact: {path} — run yara_scan.py / vol_extract.py first.")
+    return path
+
+
+def _load_json(path: Path):
+    try:
+        return json.loads(_require(path).read_text())
+    except json.JSONDecodeError as e:
+        sys.exit(f"Invalid JSON in {path.name}: {e}")
+
+
 def process_events(artifacts: Path, image: str):
     """Fields aligned with CIM Endpoint.Processes (process_name, process_id, parent_process_id, dest)."""
-    data = json.loads((artifacts / "windows_psscan.json").read_text())
+    data = _load_json(artifacts / "windows_psscan.json")
     for p in data:
         yield OrderedDict([
             ("event_time", _event_time(p.get("CreateTime"))),
@@ -78,10 +94,17 @@ def process_events(artifacts: Path, image: str):
 
 
 def yara_events(artifacts: Path, rules_file: Path, image: str):
-    """Fields aligned with CIM Alerts/IDS (signature, severity, dest)."""
-    metas = parse_rule_metadata(rules_file)
-    for line in (artifacts / "yara_hits.ndjson").read_text().splitlines():
-        for r in json.loads(line).get("rules", []):
+    """Fields aligned with CIM Alerts (signature, severity, dest)."""
+    metas = parse_rule_metadata(_require(rules_file))
+    for i, line in enumerate(_require(artifacts / "yara_hits.ndjson").read_text().splitlines(), 1):
+        if not line.strip():
+            continue
+        try:
+            rec = json.loads(line)
+        except json.JSONDecodeError as e:
+            LOG.warning("skipping malformed yara_hits.ndjson line %d: %s", i, e)
+            continue
+        for r in rec.get("rules", []):
             name = r.get("identifier")
             meta = metas.get(name, {})
             yield OrderedDict([
