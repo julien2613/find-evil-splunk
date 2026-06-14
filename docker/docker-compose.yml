@@ -29,9 +29,6 @@ services:
     volumes:
       # The packaged apps, readable by splunkd at /spl (matches `terraform apply -var spl_dir=/spl`).
       - ../terraform/dist:/spl:ro
-    healthcheck:
-      test: ["CMD", "curl", "-skf", "https://localhost:8089/services/server/info", "-o", "/dev/null"]
-      interval: 15s
-      timeout: 10s
-      retries: 40
-      start_period: 120s
+    # The image ships its own healthcheck (/sbin/checkstate.sh) — don't override it
+    # (a curl-based check fails: curl isn't in the image). `docker compose up` reports
+    # "healthy" once Splunk is fully provisioned.
